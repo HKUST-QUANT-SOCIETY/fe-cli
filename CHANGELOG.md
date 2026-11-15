@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-11-15
+
 ### Added
 
 - `fe-cli --check-update` 主动检查正式版本，`fe-cli --update` 显式升级官方安装器管理的客户端。
