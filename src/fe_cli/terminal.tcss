@@ -1,0 +1,60 @@
+Screen { background: #101113; color: #e4e6eb; }
+#topbar { height: 2; padding: 0 2; border-bottom: solid #343840; }
+#brand { width: 18; color: #b4dfc5; text-style: bold; }
+#mode { width: 1fr; color: #9299a5; text-align: right; }
+#workspace { height: 1fr; padding: 0 2; }
+#transcript { height: 1fr; min-height: 3; background: #101113; padding: 1 0;
+    scrollbar-size: 1 1; scrollbar-color: #343840; scrollbar-background: #101113; }
+#transcript:focus { background-tint: transparent; }
+#composer { height: auto; max-height: 13; padding: 0 2; }
+#factor-editor-host { display: none; height: 12; }
+.editing-factor #composer { max-height: 100%; }
+#run-editor-host { display: none; height: 12; }
+.editing-run #composer { max-height: 100%; }
+#range-editor-host { display: none; height: 6; }
+.editing-range #composer { max-height: 100%; }
+#transcript-selection { display: none; height: 1fr; min-height: 3; border: none;
+    padding: 0; background: #101113; color: #e4e6eb; }
+#transcript-selection:focus { border: none; background-tint: transparent; }
+#transcript-selection .text-area--selection { background: #343840; color: #e4e6eb; }
+#transcript-selection .text-area--cursor-line { background: #101113; }
+#copy-hint { display: none; height: auto; color: #9299a5; }
+#commands { display: none; height: auto; max-height: 6; background: #101113;
+    border: none; padding: 0 2; scrollbar-size: 1 1; }
+#commands:focus { background-tint: transparent; }
+#config-picker { display: none; height: auto; max-height: 10; padding: 0 2;
+    background: #101113; }
+#config-title { height: 1; color: #a9c9ed; text-style: bold; }
+#config-options { height: auto; max-height: 6; padding: 0; border: none;
+    background: #101113; scrollbar-size: 1 1; }
+#config-options:focus { background-tint: transparent; }
+#config-options > .option-list--option-highlighted,
+#config-options:focus > .option-list--option-highlighted { background: #24352e; color: #b4dfc5; }
+#config-options > .option-list--option-hover { background: #17191d; }
+#config-preview { height: 1; color: #efc5a1; }
+#config-picker .picker-hint { height: 1; color: #9299a5; }
+#commands > .option-list--option { background: #101113; color: #9299a5; }
+#commands > .option-list--option-hover { background: #101113; color: #e4e6eb; }
+#commands > .option-list--option-highlighted,
+#commands:focus > .option-list--option-highlighted { background: #20252a; color: #e4e6eb; }
+#command { height: 3; padding: 0 1; background: #101113; color: #e4e6eb;
+    border: none; border-top: solid #343840; }
+#command:focus { background-tint: transparent; border-top: solid #a9c9ed; }
+Input > .input--placeholder, Input > .input--suggestion { color: #9299a5; }
+Input > .input--cursor { background: #b4dfc5; color: #101113; }
+#resource-status { height: 1; color: #9299a5; }
+Footer { background: #101113; color: #9299a5; padding: 0 2; }
+FooterKey { background: #101113; }
+FooterKey > .footer-key--key { background: #101113; color: #9299a5; }
+FooterKey > .footer-key--description { background: #101113; color: #9299a5; }
+FooterKey:hover { background: #17191d; }
+FooterKey:hover > .footer-key--key { background: #17191d; color: #a9c9ed; }
+FooterKey:hover > .footer-key--description { background: #17191d; color: #e4e6eb; }
+.compact #topbar { padding: 0 1; }
+.compact #brand { width: 15; }
+.compact #workspace { padding: 0 1; }
+.compact #composer { padding: 0 1; }
+.short #transcript { padding: 0; }
+.short #commands { max-height: 4; }
+.short #config-options { max-height: 4; }
+.short #command { height: 2; }

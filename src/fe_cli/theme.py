@@ -1,0 +1,11 @@
+"""Restrained accent colors on a near-black research canvas."""
+
+BG = "#101113"
+SURFACE = "#17191d"
+TEXT = "#e4e6eb"
+MUTED = "#9299a5"
+BORDER = "#343840"
+MINT = "#b4dfc5"
+BLUE = "#a9c9ed"
+PEACH = "#efc5a1"
+ROSE = "#e6a8ad"

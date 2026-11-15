@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fe-cli"
+version = "0.1.0"
+description = "HKUST Quant Society Factor Engine research terminal"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["textual>=0.89,<1", "pyarrow>=18,<27"]
+
+[project.scripts]
+fe-cli = "fe_cli.cli:main"
+fe = "fe_cli.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "ruff>=0.9,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fe_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
