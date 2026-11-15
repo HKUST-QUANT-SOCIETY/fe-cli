@@ -3,8 +3,8 @@
 ## 当前状态
 
 CLI 版本为 `0.1.0`；新增 `fe-cli` 命令，原 `fe` 入口保留。
-curl 安装器与固定提交构建器已实现；目前尚未上传正式 Release，不能使用远程一行安装。
-下载入口确认并发布后，本页将登记实际 URL 和摘要；当前可以从本地 wheel 安装。
+`0.1.0` 已于 2026-11-15 发布：[GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.1.0)。
+固定提交、工件摘要、安装验收和推广范围见[发布记录](releases/0.1.0.md)。
 Core、服务器和数据接入不随客户端安装或升级，真实运行须另行配置和验收。
 
 ## 支持范围
@@ -19,21 +19,22 @@ Core、服务器和数据接入不随客户端安装或升级，真实运行须�
 
 ## 安装和启动
 
-在正式下载源可用前，从维护者提供并核对摘要的发布目录安装：
+免登录安装固定 `0.1.0` 并启动：
+
+```bash
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+fe-cli
+```
+
+执行上面命令会下载并运行安装脚本；也可以先下载审阅，再执行。
+脚本 SHA256：`e027d1aa196fcaf3b946358262fb1359a8e6baba7dacd22f160fae0c550f30d4`。
+也可以下载 Release 全部附件，从核对摘要后的本地目录安装：
 
 ```bash
 sha256sum -c SHA256SUMS
 FE_CLI_RELEASE_DIR="$PWD" sh ./install.sh
 export PATH="$HOME/.local/bin:$PATH"
 fe-cli --version
-fe-cli
-```
-
-正式发布后，`INSTALL_URL` 应取自已存在 Release 的 `install.sh` 下载链接；不要指向源码模板。
-执行下列命令会下载并运行安装脚本；也可以先下载审阅，再执行。
-
-```bash
-curl --fail --show-error --location "$INSTALL_URL" | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 

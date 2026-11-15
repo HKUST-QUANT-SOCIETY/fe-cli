@@ -13,19 +13,19 @@
 
 ## 近期迭代
 
-- 2026-11-15：新增 `fe-cli` 启动入口、Linux curl 安装器和固定提交发布构建器；
-  安装保留旧环境与 workspace，远程下载尚未发布。见[安装与发布](docs/installation.md)。
+- 2026-11-15：发布 `0.1.0`，支持 Linux curl 安装并直接用 `fe-cli` 启动；
+  安装保留旧环境与 workspace。见[安装手册](docs/installation.md)及[发布记录](docs/releases/0.1.0.md)。
 - 2026-11-15：公开版收敛为纯客户端，只上传请求并调用固定服务器入口；旧代码上传模式停用，
   已有结果仍可读取。见[迁移说明](docs/core_transition.md)和[开发记录](docs/development.md)。
 
 ## 启动
 
-需要 Linux / WSL、Python >=3.12 和 [uv](https://docs.astral.sh/uv/)。
-在本项目目录执行：
+支持 Linux / WSL x86_64、glibc >=2.28。安装器自动准备 uv、Python 3.12 和依赖，
+不需要 sudo 或克隆源码：
 
 ```bash
-uv sync --locked
-uv run fe-cli --demo
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+fe-cli
 ```
 
 输入 `/` 打开菜单，使用上下键选择、Tab 补全、Enter 执行。
@@ -43,20 +43,13 @@ Ctrl+C / F8 发送复制请求，Esc 或 F2 返回。选择期间固定当前文
 顶部只显示模式与查询状态；下一任务的资源摘要位于输入框下方。
 短会话贴近输入区显示；命令结果通过留白、文字层级和少量薄荷绿、淡蓝、杏色区分。
 
-希望直接用 `fe-cli` 启动，可将本地项目安装为独立工具（原 `fe` 入口保留）：
-
-```bash
-uv tool install .
-fe-cli --demo
-```
-
-Linux curl 安装器和固定版本工件构建已实现，远程下载尚未发布。
+默认安装到用户目录；需要在新终端继续使用时，请确保 `~/.local/bin` 已加入 shell 的 PATH。
 支持范围、固定工件安装、升级和回退见[安装手册](docs/installation.md)。
 
 ## 初始化本机因子库
 
 ```bash
-uv run fe init
+fe-cli init
 ```
 
 默认创建 `~/fe-workspace/`，并打印 CSV 和说明文件的完整路径：
@@ -75,7 +68,7 @@ fe-workspace/
 例如 `values/FACTOR_ID/DEFINITION_HASH/REQUEST_ID/result.parquet`；只有最终本机
 `commit.json` 已发布的结果算交付完成。增量计算尚未实现。
 
-自定义位置使用 `uv run fe init /path/to/workspace`；之后在命令前指定
+自定义位置使用 `fe-cli init /path/to/workspace`；之后在命令前指定
 `--workspace /path/to/workspace`。终端里也可使用 `/init [目录]`，仅切换当前会话的工作目录。
 
 CSV 的固定列为：
@@ -90,12 +83,12 @@ ID 唯一且稳定，名称与表达式不能为空；`enabled` 使用 true/fals
 CLI 会检查并发修改并协调自己的写入，但无法完全阻止不遵循锁的外部编辑器竞争。
 
 ```bash
-uv run fe factor add ret_mean20 --name "Mean return (20d)" \
+fe-cli factor add ret_mean20 --name "Mean return (20d)" \
   --expression 'ts_mean(col("ret"), 20)'
-uv run fe factor list
-uv run fe factor show ret_mean20
-uv run fe factor update ret_mean20 --name "Mean daily return"
-uv run fe factor delete ret_mean20
+fe-cli factor list
+fe-cli factor show ret_mean20
+fe-cli factor update ret_mean20 --name "Mean daily return"
+fe-cli factor delete ret_mean20
 ```
 
 保存只验证定义字段和 CSV 结构，不执行 Python，也不表示 FE DSL 已校验。
@@ -110,7 +103,7 @@ uv run fe factor delete ret_mean20
 编辑期间需先保存或取消再打开其他编辑流程；任务查询与帮助仍可使用。
 这些操作在 `--online` 模式下也只读写本机文件，不调用 SSH。
 
-模拟模式下 `uv run fe run ret_mean20` 会读取库中表达式；也可先在终端选择因子，再 `/run`，
+模拟模式下 `fe-cli run ret_mean20` 会读取库中表达式；也可先在终端选择因子，再 `/run`，
 表单会预填最新定义。本次运行中的修改不会改写 CSV。禁用或不存在的库内因子不能运行。
 在线运行要求选择启用的库内因子，再明确提交；`run all`、真实增量和数据源最新日期规划仍待后续实现。
 磁盘源字段使用 `col("ret")`、`col("pb_ratio")` 等明确写法；已知裸字段在提交前报错，
@@ -121,8 +114,8 @@ uv run fe factor delete ret_mean20
 先在本机保存连接参数；此操作不会连接服务器，也不会读取私钥内容：
 
 ```bash
-uv run fe configure --host YOUR_QCL_HOST --user YOUR_QCL
-uv run fe --online
+fe-cli configure --host YOUR_QCL_HOST --user YOUR_QCL
+fe-cli --online
 ```
 
 如果已有本机 SSH 别名，也可只指定 `--host 你的别名`，沿用 SSH 配置中的账号和密钥。
@@ -162,10 +155,10 @@ uv run fe --online
 也可直接查询并得到带 `demo: false` 的 JSON：
 
 ```bash
-uv run fe --online setup
-uv run fe --online jobs
-uv run fe --online history
-uv run fe --online history full
+fe-cli --online setup
+fe-cli --online jobs
+fe-cli --online history
+fe-cli --online history full
 ```
 
 普通 CLI `setup` 返回 `diagnostic` 对象；认证成功退出 0，失败或未确认退出 1。
@@ -182,16 +175,16 @@ uv run fe --online history full
 设置为实际获准值。配置命令只写本机 `runtime.json`，不安装后端或连接服务器：
 
 ```bash
-uv run fe configure-run --remote-python "$REMOTE_FE_PYTHON" \
+fe-cli configure-run --remote-python "$REMOTE_FE_PYTHON" \
   --data-root "$REMOTE_DATA_ROOT" --release-root "$REMOTE_RELEASE_ROOT" \
   --release-sha256 "$REMOTE_RELEASE_SHA256"
-uv run fe prepare ret_mean20 --start 2026-10-01 --end 2026-10-30
+fe-cli prepare ret_mean20 --start 2026-10-01 --end 2026-10-30
 # 以下命令会真实提交；仅在决定运行时执行
-uv run fe --online run ret_mean20 --start 2026-10-01 --end 2026-10-30
-uv run fe --online results JOB_ID
+fe-cli --online run ret_mean20 --start 2026-10-01 --end 2026-10-30
+fe-cli --online results JOB_ID
 # results 与 collect 使用同一下载、校验和本机提交流程
-uv run fe --online collect JOB_ID
-uv run fe runs
+fe-cli --online collect JOB_ID
+fe-cli runs
 ```
 
 运行配置默认 A、`research`、30 分钟，默认资源为 6 CPU / 18G。
@@ -200,7 +193,7 @@ uv run fe runs
 在线终端中选择因子，再 `/run`，在命令框上方核对参数后按 Enter 提交；仅展开编辑区不会提交。
 完成后 `/results JOB_ID` 才取回真实 Parquet 并显示已提交的本机路径；`/runs` 查看本机交付状态。
 
-也可将人工下载的归档交给 `uv run fe import-results /path/to/results.tar.gz`，无需连接服务器。
+也可将人工下载的归档交给 `fe-cli import-results /path/to/results.tar.gz`，无需连接服务器。
 源码提供运行与交付链路，真实服务器安装、数据权限和首个真实任务仍须以实际验收证据确认。
 源字段、预热、协议、目录与状态边界见[单因子运行说明](docs/single_run.md)。
 
@@ -213,8 +206,8 @@ uv run fe runs
 /range 2020-01-01 2025-12-31
 ```
 
-普通命令行使用 `uv run fe range` 查看默认值，
-`uv run fe range 2020-01-01 2025-12-31` 保存；即使指定 `--online`，该设置也只操作本机。
+普通命令行使用 `fe-cli range` 查看默认值，
+`fe-cli range 2020-01-01 2025-12-31` 保存；即使指定 `--online`，该设置也只操作本机。
 两种模式及各工作目录共用 `${XDG_CONFIG_HOME:-~/.config}/fe-cli/range.json`，重启后保留。
 全局参数 `--range-config PATH` 可指定独立配置文件。
 
@@ -250,11 +243,11 @@ uv run fe runs
 普通命令行同样支持本机偏好和单次覆盖：
 
 ```bash
-uv run fe node C
-uv run fe resources 8
-uv run fe node                  # 查看当前选择
-uv run fe resources             # 查看当前 CPU/内存请求
-uv run fe run --node A --cpus 2  # 仅此模拟任务使用 A、2 CPU / 6 GB
+fe-cli node C
+fe-cli resources 8
+fe-cli node                  # 查看当前选择
+fe-cli resources             # 查看当前 CPU/内存请求
+fe-cli run --node A --cpus 2  # 仅此模拟任务使用 A、2 CPU / 6 GB
 ```
 
 ## 模拟交互命令
@@ -284,11 +277,11 @@ uv run fe run --node A --cpus 2  # 仅此模拟任务使用 A、2 CPU / 6 GB
 可用于脚本或不支持全屏界面的环境；以下模拟命令输出 JSON，并带 `demo: true`。
 
 ```bash
-uv run fe --state-dir .demo-state run --factor momentum_20d \
+fe-cli --state-dir .demo-state run --factor momentum_20d \
   --formula 'ts_mean(ret, 20)' --start 2026-10-01 --end 2026-10-31
-uv run fe --state-dir .demo-state jobs
+fe-cli --state-dir .demo-state jobs
 # 约 5 秒后；编号以 run 返回值为准
-uv run fe --state-dir .demo-state results demo-0001
+fe-cli --state-dir .demo-state results demo-0001
 ```
 
 `run --fail` 可演示失败状态；`cancel 编号` 取消任务。
@@ -304,8 +297,11 @@ uv run fe --state-dir .demo-state results demo-0001
 
 ## 开发
 
+源码开发需要 Python >=3.12 和 [uv](https://docs.astral.sh/uv/)；在本项目目录执行：
+
 ```bash
 uv sync --locked
+uv run fe-cli --demo
 uv run ruff check .
 uv run pytest -q tests/test_app.py   # 开发时做定点验证
 uv run pytest -q                     # 收尾全量一次

@@ -4,6 +4,7 @@
 - [Core/CLI 共享维护工作流](shared_release_workflow.md)：独立版本线、兼容性、迭代、发布、安装与升级规范。
 - [产品变更日志](../CHANGELOG.md)：Unreleased 和今后正式发布的重要变化。
 - [Linux 安装与发布](installation.md)：`fe-cli` 入口、curl 安装器、固定工件、升级与回退。
+- [0.1.0 发布记录](releases/0.1.0.md)：源提交、摘要、验收和推广状态。
 - [开发记录](development.md)：各阶段实现和历史验证证据。
 - [节点与资源选择](resource_selection.md)：0.3.0 的资源合同。
 - [本机因子库](local_catalog.md)：0.4.0 的初始化、CSV 和定义管理。
