@@ -13,9 +13,8 @@
 
 ## 近期迭代
 
-- 2026-11-15：更新功能按维护者确认定为 `0.1.1`，增加后台提示、`--check-update` 和 `--update`；
-  正在构建发布工件，现有 `0.1.0` 安装包保持原样。
-  见[客户端更新](#客户端更新)与[开发记录](docs/development.md#cli-updates)。
+- 2026-11-15：发布 `0.1.1`，增加后台更新提示、`--check-update` 和 `--update`；
+  通过 `0.1.0` 升级及回退、匿名安装验收。见[客户端更新](#客户端更新)与[发布记录](docs/releases/0.1.1.md)。
 - 2026-11-15：发布 `0.1.0`，支持 Linux curl 安装并直接用 `fe-cli` 启动；
   安装保留旧环境与 workspace。见[安装手册](docs/installation.md)及[发布记录](docs/releases/0.1.0.md)。
 - 2026-11-15：公开版收敛为纯客户端，只上传请求并调用固定服务器入口；旧代码上传模式停用，
@@ -27,7 +26,7 @@
 不需要 sudo 或克隆源码：
 
 ```bash
-curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.1/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 
@@ -51,7 +50,7 @@ Ctrl+C / F8 发送复制请求，Esc 或 F2 返回。选择期间固定当前文
 
 ## 客户端更新
 
-以下功能将随 `0.1.1` 发布，当前正式 `0.1.0` 安装包不包含这些指令。
+以下功能从 `0.1.1` 起可用；`0.1.0` 用户先运行上方安装命令升级一次。
 
 ```bash
 fe-cli --check-update   # 主动检查最新正式客户端

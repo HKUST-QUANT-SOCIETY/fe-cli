@@ -2,9 +2,10 @@
 
 ## 当前状态
 
-本次更新已定为 `0.1.1`，正在构建发布工件；正式下载仍为 `0.1.0`，`fe` 兼容入口保留。
-`0.1.0` 已于 2026-11-15 发布：[GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.1.0)。
-固定提交、工件摘要、安装验收和推广范围见[发布记录](releases/0.1.0.md)。
+最新正式版本为 `0.1.1`，`fe` 兼容入口保留：
+[GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.1.1)。
+固定提交、工件摘要、安装验收和推广范围见[发布记录](releases/0.1.1.md)，
+历史版本见 [0.1.0 记录](releases/0.1.0.md)。
 Core、服务器和数据接入不随客户端安装或升级，真实运行须另行配置和验收。
 
 ## 支持范围
@@ -19,15 +20,15 @@ Core、服务器和数据接入不随客户端安装或升级，真实运行须�
 
 ## 安装和启动
 
-免登录安装固定 `0.1.0` 并启动：
+免登录安装固定 `0.1.1` 并启动：
 
 ```bash
-curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.1/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 
 执行上面命令会下载并运行安装脚本；也可以先下载审阅，再执行。
-脚本 SHA256：`e027d1aa196fcaf3b946358262fb1359a8e6baba7dacd22f160fae0c550f30d4`。
+脚本 SHA256：`2607934c929adb4b91e7cad2a2d04c43175ce9a3629e7e34dc109be6e37509c8`。
 也可以下载 Release 全部附件，从核对摘要后的本地目录安装：
 
 ```bash
@@ -50,7 +51,7 @@ shell 配置后，新终端即可直接执行 `fe-cli`；当前 shell 的 PATH �
 不需要安装器时，也可使用项目 uv 工具流程安装已校验的 wheel：
 
 ```bash
-uv tool install --python 3.12 --constraints requirements.txt ./fe_cli-0.1.0-py3-none-any.whl
+uv tool install --python 3.12 --constraints requirements.txt ./fe_cli-0.1.1-py3-none-any.whl
 fe-cli --version
 fe-cli
 ```
@@ -77,8 +78,8 @@ SSH、服务器运行环境、节点/资源/日期、真实 run/results 操作�
 
 ## 客户端更新（0.1.1）
 
-`0.1.1` 增加 `fe-cli --check-update` 和 `fe-cli --update`，发布前可用
-`uv run fe-cli --check-update` 在源码环境检查。当前下载的 `0.1.0` 不支持这两个参数。
+`0.1.1` 增加 `fe-cli --check-update` 和 `fe-cli --update`，源码环境也可用
+`uv run fe-cli --check-update` 检查。历史 `0.1.0` 不支持这两个参数，需先运行上方安装脚本。
 版本号来自包元数据，数字分段比较；只更新到更高的正式版，不自动降级或选取预发布版。
 
 交互启动后在后台检查固定仓库的公开 Release；请求只携带客户端标识，
@@ -94,8 +95,8 @@ SSH、服务器运行环境、节点/资源/日期、真实 run/results 操作�
 下载有容量限制和超时，HTTPS 重定向不能降级为 HTTP；仅通过固定官方仓库发现版本。
 本功能依据 GitHub 发布渠道身份校验，并不提供独立签名密钥体系。
 
-旧 `0.1.0` 既没有更新命令，也没有新的安装归属记录：新版正式发布后，
-先运行那份固定版本安装脚本完成一次迁移，之后即可使用 `--update`。
+旧 `0.1.0` 既没有更新命令，也没有新的安装归属记录：
+先运行 `0.1.1` 固定安装脚本完成一次迁移，之后即可使用 `--update`。
 `uv tool`、pip 或源码安装应沿用原安装方式升级；自更新不会覆盖它们的环境或入口。
 自定义安装路径由安装器记录，升级继续使用相同位置。
 
