@@ -10,6 +10,7 @@
 - [节点与资源选择](resource_selection.md)：0.3.0 的资源合同。
 - [本机因子库](local_catalog.md)：0.4.0 的初始化、CSV 和定义管理。
 - [单因子真实运行](single_run.md)：显式提交、源合同、真实结果校验与本机交付。
+- [远程隔离演练](remote_rehearsal.md)：已发布客户端的真实通信与调度、合成结果及未验收边界。
 - [公共运行版本](public_runtime.md)：公共源码与环境发布、A/C 共享入口及验收记录。
 
 当前可用能力以根 [README](../README.md) 和源码为准；开发记录中的旧版本描述与
