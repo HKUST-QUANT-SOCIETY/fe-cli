@@ -24,6 +24,10 @@ main() {
     case "$version:$repository:$wheel_sha:$requirements_sha:$manifest_sha" in
         *@*) fail 'This is a source template. Use install.sh from a built release.' ;;
     esac
+    if [ "${FE_CLI_EXPECTED_VERSION+x}" = x ]; then
+        [ "$version" = "$FE_CLI_EXPECTED_VERSION" ] || fail \
+            'Release version differs from the requested update; installation was not started.'
+    fi
     [ "$(uname -s)" = Linux ] || fail 'This installer supports Linux only.'
     [ "$(uname -m)" = x86_64 ] || fail 'This release supports x86_64 only.'
     libc=$(getconf GNU_LIBC_VERSION 2>/dev/null) || fail 'glibc >= 2.28 is required.'
@@ -126,6 +130,7 @@ main() {
     actual_version=$("$environment/bin/fe-cli" --version)
     [ "$actual_version" = "fe-cli $version" ] || fail 'Installed version check failed.'
     printf '%s\n' "$manifest_sha" > "$environment/.fe-cli-ready"
+    printf '%s\n' "$bin_dir" > "$environment/.fe-cli-bin-dir"
     check_target
     link="$bin_dir/.fe-cli-link-$$"
     ln -s "$environment/bin/fe-cli" "$link"

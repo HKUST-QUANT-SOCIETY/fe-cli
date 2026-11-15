@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -20,6 +21,7 @@ from fe_cli.history import recent_history
 from fe_cli.remote import RemoteClient
 from fe_cli.resources import ResourceRequest, ResourceStore, normalize_node
 from fe_cli.runtime_settings import RuntimeSettings, RuntimeStore
+from fe_cli.updates import UpdateChecker, UpdateError, version_key
 from fe_cli.workspace import Workspace
 
 _ONLINE_COMMANDS = {
@@ -36,6 +38,12 @@ def _parser() -> argparse.ArgumentParser:
         description="Factor research terminal — local demo or explicit online operations.",
     )
     parser.add_argument("--version", action="version", version=f"{program} {__version__}")
+    maintenance = parser.add_mutually_exclusive_group()
+    maintenance.add_argument("--check-update", action="store_true", help="check for a CLI update")
+    maintenance.add_argument("--update", action="store_true", help="install the latest stable CLI")
+    parser.add_argument(
+        "--no-update-check", action="store_true", help="disable background CLI update checks"
+    )
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--demo", action="store_true", help="use the local demo (default)")
     modes.add_argument("--online", action="store_true", help="use explicit remote operations")
@@ -341,6 +349,7 @@ def _online(args: argparse.Namespace) -> int:
             online=client, resource_store=ResourceStore(path=args.resource_config),
             date_range_store=DateRangeStore(path=args.range_config),
             workspace=Workspace(args.workspace),
+            update_checker=_update_checker(args),
         ).run()
         return 0
     result = asyncio.run(client.query(_ONLINE_COMMANDS[args.command]))
@@ -361,9 +370,43 @@ def _online(args: argparse.Namespace) -> int:
     return 0
 
 
+def _update_checker(args: argparse.Namespace) -> UpdateChecker | None:
+    if args.no_update_check or os.environ.get("FE_CLI_NO_UPDATE_CHECK"):
+        return None
+    return UpdateChecker()
+
+
+def _manage_updates(args: argparse.Namespace) -> int:
+    try:
+        release = UpdateChecker().check(force=True)
+        if release is None:
+            raise UpdateError("No stable CLI release is available.")
+        print(f"Current CLI version: {__version__}")
+        print(f"Latest stable CLI version: {release.version}")
+        if version_key(release.version) <= version_key(__version__):
+            print("No newer stable CLI version is available.")
+        elif args.check_update:
+            print("Update available. Run fe-cli --update to install it.")
+        else:
+            from fe_cli.self_update import run_update
+
+            print(f"Updating fe-cli {__version__} to {release.version}...", flush=True)
+            run_update(release)
+            print(f"Updated to fe-cli {release.version}. Run fe-cli again to start it.")
+        return 0
+    except (UpdateError, OSError, ValueError) as exc:
+        print(f"fe-cli: update error: {exc}", file=sys.stderr)
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run a CLI command or open the terminal, returning a process exit code."""
-    args = _parser().parse_args(argv)
+    parser = _parser()
+    args = parser.parse_args(argv)
+    if args.update or args.check_update:
+        if args.command is not None:
+            parser.error("--update and --check-update cannot be combined with a subcommand")
+        return _manage_updates(args)
     try:
         if args.command == "init":
             _initialize(args)
@@ -410,6 +453,7 @@ def main(argv: list[str] | None = None) -> int:
                 backend=backend, resource_store=ResourceStore(path=args.resource_config),
                 date_range_store=DateRangeStore(path=args.range_config),
                 workspace=Workspace(args.workspace),
+                update_checker=_update_checker(args),
             ).run()
         elif args.command == "run":
             job = backend.submit(

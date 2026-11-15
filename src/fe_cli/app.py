@@ -22,6 +22,7 @@ from textual.theme import Theme
 from textual.widgets import Footer, Input, OptionList, RichLog, Static, TextArea
 from textual.widgets.option_list import Option
 
+from fe_cli import __version__
 from fe_cli.backend import DemoBackend
 from fe_cli.date_range import DateRange, DateRangeStore
 from fe_cli.factor_screen import FactorEditor
@@ -37,6 +38,7 @@ from fe_cli.theme import BG, BLUE, MINT, MUTED, PEACH, ROSE, SURFACE, TEXT
 if TYPE_CHECKING:
     from fe_cli.catalog import FactorDefinition
     from fe_cli.remote import RemoteClient
+    from fe_cli.updates import UpdateChecker
     from fe_cli.workspace import Workspace
 
 COMMANDS = {
@@ -179,6 +181,7 @@ class FactorTerminal(App):
         resource_store: ResourceStore | None = None,
         date_range_store: DateRangeStore | None = None,
         workspace: Workspace | None = None,
+        update_checker: UpdateChecker | None = None,
     ) -> None:
         if backend is not None and online is not None:
             raise ValueError("Choose either demo or online mode.")
@@ -202,6 +205,7 @@ class FactorTerminal(App):
         )
         self.theme = "fe-night"
         self.online = online
+        self.update_checker = update_checker
         self.resource_store = resource_store
         self.resources = resource_store.load() if resource_store is not None else ResourceRequest()
         self.date_range_store = date_range_store
@@ -223,7 +227,7 @@ class FactorTerminal(App):
 
     def mode_text(self) -> str:
         if self.online is None:
-            return "LOCAL DEMO · Offline"
+            return "LOCAL DEMO"
         return f"ONLINE · {self._connection_status}"
 
     def resource_text(self) -> Text:
@@ -297,6 +301,26 @@ class FactorTerminal(App):
                 "Demo jobs produce synthetic reports. No engine or market data is used.", "#999999"
             )
         self.action_focus_command()
+
+        if self.update_checker is not None:
+            self.check_update_notice()
+
+    @work(thread=True, group="update-check", exclusive=True, exit_on_error=False)
+    def check_update_notice(self) -> None:
+        from fe_cli.updates import UpdateError, version_key
+
+        try:
+            release = self.update_checker.check() if self.update_checker is not None else None
+            if release is not None and version_key(release.version) > version_key(__version__):
+                self.call_from_thread(
+                    self.write,
+                    f"CLI update available: {__version__} → {release.version}. "
+                    "Exit and run fe-cli --update to install it.",
+                    MINT,
+                )
+        except (UpdateError, OSError, ValueError, RuntimeError):
+            # Version hints and an app closing during a check must not interrupt the session.
+            return
 
     def on_resize(self, event: events.Resize) -> None:
         self.set_class(event.size.width < 80, "compact")

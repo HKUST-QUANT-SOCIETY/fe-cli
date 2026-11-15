@@ -205,6 +205,7 @@ def test_install_and_repeat_preserve_workspace_configuration_and_environment(ins
     first = installer.run(script)
     assert first.returncode == 0, first.stderr
     assert installer.target.resolve() == environment / "bin" / "fe-cli"
+    assert (environment / ".fe-cli-bin-dir").read_text() == str(installer.bin) + "\n"
     started = subprocess.run(
         [str(installer.target), "--version"], env=installer.env,
         capture_output=True, text=True, timeout=5,
@@ -223,6 +224,32 @@ def test_install_and_repeat_preserve_workspace_configuration_and_environment(ins
     for path in retained:
         assert path.read_bytes() == b"existing user data\n"
     installer.assert_no_temporary_files()
+
+
+def test_expected_version_mismatch_fails_before_creating_paths_or_downloading(installer):
+    script, environment = installer.release()
+
+    result = installer.run(script, FE_CLI_EXPECTED_VERSION="0.1.1")
+
+    assert result.returncode != 0
+    assert "Release version differs" in result.stderr
+    assert not installer.root.exists()
+    assert not installer.bin.exists()
+    assert not environment.exists()
+    assert not installer.log.exists()
+
+
+def test_expected_version_match_records_custom_launcher_path(installer):
+    script, environment = installer.release()
+    custom_bin = installer.home / "custom bin with spaces"
+
+    result = installer.run(
+        script, FE_CLI_EXPECTED_VERSION="0.1.0", FE_CLI_BIN_DIR=str(custom_bin),
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (custom_bin / "fe-cli").resolve() == environment / "bin" / "fe-cli"
+    assert (environment / ".fe-cli-bin-dir").read_text() == str(custom_bin) + "\n"
 
 
 def test_upgrade_keeps_old_environment_and_failed_upgrade_keeps_active_command(installer):

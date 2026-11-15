@@ -5,6 +5,12 @@
 
 ## Unreleased
 
+### Added
+
+- `fe-cli --check-update` 主动检查正式版本，`fe-cli --update` 显式升级官方安装器管理的客户端。
+- 交互启动时后台提示新版本，成功检查缓存 24 小时；可用 `--no-update-check` 或
+  `FE_CLI_NO_UPDATE_CHECK=1` 关闭。普通命令不触发检查，检查失败不影响使用。
+
 ## 0.1.0 - 2026-11-15
 
 ### Changed
