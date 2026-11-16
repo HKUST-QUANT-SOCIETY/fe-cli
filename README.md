@@ -8,8 +8,7 @@
 支持本地模拟、通过 SSH 认证的 QCL 查询和调用既有服务器入口执行单因子任务。默认启动模拟模式；显式使用
 `--online run`，或在在线终端的运行编辑区按 Enter 确认，才提交真实任务。
 `results` / `collect` 下载并校验结果后写入本机；在线取消与服务器环境安装不支持。
-当前源码版本为 `0.2.0`，正在准备发布；下述初始化、裸字段和 `/status` 新行为需要此版本。
-最新正式安装包仍为 `0.1.1`，其安装入口保留在下文。
+当前正式版本为 `0.2.0`；下述初始化、裸字段和 `/status` 新行为需要升级到此版本。
 自动选择当前 FE 的模式要求服务器提供配套启动入口；Core 的发布与服务器升级由维护者独立完成。
 默认任务请求为 `quant-a / 6 CPU / 18G`，可通过 `/node` 和 `/resources` 选择；
 模拟报告的 `PASS` 只表示演示流程完成。
@@ -18,7 +17,7 @@
 
 - 2026-11-16：服务器更新统一为“本机修改 → 远端发布 → 服务器拉取指定发布版本”，禁止现场改源码；Core 本次升级为 0.5.2，CLI 独立编号。见[共享发布规范](docs/shared_release_workflow.md#发布前置条件)。
 
-- 2026-11-16：准备 `0.2.0`：裸字段公式原样提交，授权检查改用 `/status`，首次 `/init` 自动配置
+- 2026-11-16：发布 `0.2.0`：裸字段公式原样提交，授权检查改用 `/status`，首次 `/init` 自动配置
   标准运行路径；新配置自动选择当前 Core，更新 Core 无需重填 SHA。见[迭代记录](docs/development.md)
   与[调用范例](docs/core_call_examples.md)。
 - 2026-11-15：已发布客户端完成 A 节点远程隔离演练，合成成功/失败、幂等取回与篡改拒绝通过；
@@ -36,7 +35,7 @@
 不需要 sudo 或克隆源码：
 
 ```bash
-curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.1.1/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.2.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 

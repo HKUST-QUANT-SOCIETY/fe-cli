@@ -9,9 +9,8 @@
 fe-cli init
 ```
 
-CLI 源码 `0.2.0` 默认创建 `~/fe-workspace`，包含 `factors.csv`、说明文件、
-`runtime.json`、`values/` 和 `runs/`。最新正式客户端仍为 `0.1.1`，
-以下新增默认配置不代表 `0.2.0` 已正式发布或服务器已更新。
+CLI `0.2.0` 默认创建 `~/fe-workspace`，包含 `factors.csv`、说明文件、
+`runtime.json`、`values/` 和 `runs/`。初始化写入配置不代表服务器已更新。
 也可执行 `fe-cli init DIRECTORY`，后续通过全局 `--workspace DIRECTORY`
 使用该目录。终端 `/init [目录]` 可切换当前会话的工作目录。
 
