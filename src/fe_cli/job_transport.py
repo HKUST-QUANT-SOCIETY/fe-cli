@@ -52,9 +52,9 @@ def build_submit_argv(
     validate_request(request)
     runtime.__post_init__()
     resource = request["resources"]
-    if not runtime.release_root or not runtime.release_sha256:
+    if not runtime.release_root:
         raise ValueError(
-            "Configure an authorized server release_root and release_sha256 with configure-run; "
+            "Configure an authorized server release_root with configure-run; "
             "legacy code-upload mode is no longer supported."
         )
     frozen_runtime = request.get("runtime", {})
@@ -65,7 +65,7 @@ def build_submit_argv(
         raise ValueError("Public release differs from the frozen request runtime")
     entrypoint = [
         f"{runtime.release_root.rstrip('/')}/runner.py",
-        "--release-sha256", runtime.release_sha256, "request.json",
+        "--release-sha256", runtime.release_sha256 or "current", "request.json",
     ]
     return [
         *build_ssh_prefix(config),

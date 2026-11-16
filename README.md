@@ -8,6 +8,9 @@
 支持本地模拟、通过 SSH 认证的 QCL 查询和调用既有服务器入口执行单因子任务。默认启动模拟模式；显式使用
 `--online run`，或在在线终端的运行编辑区按 Enter 确认，才提交真实任务。
 `results` / `collect` 下载并校验结果后写入本机；在线取消与服务器环境安装不支持。
+当前源码版本为 `0.2.0`，正在准备发布；下述初始化、裸字段和 `/status` 新行为需要此版本。
+最新正式安装包仍为 `0.1.1`，其安装入口保留在下文。
+自动选择当前 FE 的模式要求服务器提供配套启动入口；Core 的发布与服务器升级由维护者独立完成。
 默认任务请求为 `quant-a / 6 CPU / 18G`，可通过 `/node` 和 `/resources` 选择；
 模拟报告的 `PASS` 只表示演示流程完成。
 
@@ -15,10 +18,9 @@
 
 - 2026-11-16：服务器更新统一为“本机修改 → 远端发布 → 服务器拉取指定发布版本”，禁止现场改源码；Core 本次升级为 0.5.2，CLI 独立编号。见[共享发布规范](docs/shared_release_workflow.md#发布前置条件)。
 
-- 2026-11-16：补充[固定目录服务更新约定](docs/public_runtime.md#固定目录的服务更新)：
-  源码与环境复用原路径，维护期间暂停任务，更新后重新配置清单摘要。
-- 2026-11-16：补充 [Core 与 CLI 调用范例](docs/core_call_examples.md)，明确 Core 支持裸字段，
-  当前客户端提交仍要求已知字段使用 `col()`；提供可完整运行的合成计算与落湖示例。
+- 2026-11-16：准备 `0.2.0`：裸字段公式原样提交，授权检查改用 `/status`，首次 `/init` 自动配置
+  标准运行路径；新配置自动选择当前 Core，更新 Core 无需重填 SHA。见[迭代记录](docs/development.md)
+  与[调用范例](docs/core_call_examples.md)。
 - 2026-11-15：已发布客户端完成 A 节点远程隔离演练，合成成功/失败、幂等取回与篡改拒绝通过；
   尚不代表 Core 或真实数据验收。见[演练范围与结果](docs/remote_rehearsal.md)。
 - 2026-11-15：发布 `0.1.1`，增加后台更新提示、`--check-update` 和 `--update`；
@@ -87,12 +89,15 @@ fe-cli init
 fe-workspace/
   factors.csv
   README.md
+  runtime.json
   values/
   runs/
 ```
 
 `factors.csv` 初始只有表头，不自动塞入演示因子。可以直接编辑，或通过 CLI 维护。
-重复 init 保留已有 CSV 和说明文件；损坏文件会报错，不会静默重建。
+首次 init 同时写入标准运行配置：`/public/fe-core`、`/public/fe-core-env/bin/python` 及获准日线目录，
+默认 A / research / 30 分钟，无需手动填写 Core SHA。这个步骤只配置本机，不连接或安装服务器。
+重复 init 保留已有 CSV、说明和自定义运行配置；损坏文件会报错，不会静默重建。
 `values/` 保存校验后的不可变结果，`runs/` 保存冻结请求、提交记录、manifest 和最终提交回执。
 例如 `values/FACTOR_ID/DEFINITION_HASH/REQUEST_ID/result.parquet`；只有最终本机
 `commit.json` 已发布的结果算交付完成。增量计算尚未实现。
@@ -135,10 +140,8 @@ fe-cli factor delete ret_mean20
 模拟模式下 `fe-cli run ret_mean20` 会读取库中表达式；也可先在终端选择因子，再 `/run`，
 表单会预填最新定义。本次运行中的修改不会改写 CSV。禁用或不存在的库内因子不能运行。
 在线运行要求选择启用的库内因子，再明确提交；`run all`、真实增量和数据源最新日期规划仍待后续实现。
-磁盘源字段使用 `col("ret")`、`col("pb_ratio")` 等明确写法；已知裸字段在提交前报错，
-不会自动把目录字段解释成磁盘列，也不修改 CSV 表达式。
-这是当前客户端的提交限制；直接使用新版 Core 的 `parse_factor` 支持裸字段和 `col()`，
-详见 [调用范例与入口排查](docs/core_call_examples.md)。
+裸字段 `ret`、`pb_ratio` 与 `col("ret")`、`col("pb_ratio")` 均可提交，公式按原文保存和发送。
+客户端不改写字段、不执行公式；字段绑定及语义由 Core 校验，详见[调用范例](docs/core_call_examples.md)。
 
 ## 在线服务
 
@@ -161,7 +164,7 @@ fe-cli --online
 
 | 在线命令 | 远程入口 |
 | --- | --- |
-| `/setup` | 独立 SSH 握手，诊断连接、公钥认证与实际认证密钥指纹；不执行远程命令 |
+| `/status` | 独立 SSH 握手，检查连接、公钥认证与实际认证密钥指纹；不执行远程命令 |
 | `/envs` | `cluster-envs`：列出注册环境 |
 | `/jobs` | `cluster-status`：当前任务 |
 | `/history` | `cluster-history`：保留表头，按任务编号倒序显示最近 10 条记录 |
@@ -178,7 +181,7 @@ fe-cli --online
 默认连接超时 10 秒，查询超时 30 秒，可在 configure 中调整 `--connect-timeout`、`--timeout`。
 超时或连接错误不自动重试。SSH 查询成功不代表 FE 安装、COS 或真实数据权限已验证。
 
-`/setup` 不打开远程 shell，不申请算力，也不读取环境列表或用户组。
+`/status` 不打开远程 shell，不申请算力，也不读取环境列表或用户组。`/setup` 保留为兼容别名。
 只有 OpenSSH 明确确认公钥认证成功才显示认证指纹；仅出现候选密钥或服务器接受密钥的提示，
 不算认证成功。网络、主机校验与认证失败分别说明，证据不足时保持 unknown。
 诊断只返回目标、账号、连接/认证状态和公钥指纹等摘要，不输出完整调试日志或读取私钥正文。
@@ -186,29 +189,28 @@ fe-cli --online
 也可直接查询并得到带 `demo: false` 的 JSON：
 
 ```bash
-fe-cli --online setup
+fe-cli --online status
 fe-cli --online jobs
 fe-cli --online history
 fe-cli --online history full
 ```
 
-普通 CLI `setup` 返回 `diagnostic` 对象；认证成功退出 0，失败或未确认退出 1。
+普通 CLI `status` 返回 `diagnostic` 对象；认证成功退出 0，失败或未确认退出 1。
 
 在线模式下 `run` 提交一个真实任务，`results` / `collect` 下载并校验后提交到本机；
 对应终端入口为 `/run` 和 `/results`。`cancel` 仍不支持在线取消，需用户使用集群工具处理。
-`setup`、`envs`、`history [full]` 和 `collect` 需要 `--online`。
+`status`（兼容 `setup`）、`envs`、`history [full]` 和 `collect` 需要 `--online`。
 历史的 10 条限制只统计记录，不包含表头与分隔线；完整模式保持服务器返回顺序。
 `history full` 不会扩大服务器自身的历史覆盖范围，现有 1 MiB 查询输出上限仍然生效。
 
 ## 单因子真实运行与本机结果
 
-先向服务维护者取得既有服务器入口、解释器、数据根目录和版本清单摘要；以下变量须由使用者
-设置为实际获准值。配置命令只写本机 `runtime.json`，不安装后端或连接服务器：
+首次 `init` 已配置标准服务器路径。需要自定义获准路径时才运行 `configure-run`，
+新配置不需要固定 SHA；配置命令只写本机 `runtime.json`，不安装后端或连接服务器：
 
 ```bash
 fe-cli configure-run --remote-python "$REMOTE_FE_PYTHON" \
-  --data-root "$REMOTE_DATA_ROOT" --release-root "$REMOTE_RELEASE_ROOT" \
-  --release-sha256 "$REMOTE_RELEASE_SHA256"
+  --data-root "$REMOTE_DATA_ROOT" --release-root "$REMOTE_RELEASE_ROOT"
 fe-cli prepare ret_mean20 --start 2026-10-01 --end 2026-10-30
 # 以下命令会真实提交；仅在决定运行时执行
 fe-cli --online run ret_mean20 --start 2026-10-01 --end 2026-10-30
@@ -219,7 +221,9 @@ fe-cli runs
 ```
 
 运行配置默认 A、`research`、30 分钟，默认资源为 6 CPU / 18G。
-解释器、数据根目录、服务器入口和摘要必须显式配置；不猜测任何现有服务器路径。
+标准部署路径由 init 写入；路径不同可显式配置，配置本身不证明权限或服务可用。
+默认由作业启动时验证并记录当前 Core 清单、提交和 wheel 身份，后续 Core 更新无需重配客户端。
+旧固定 SHA 配置继续严格执行；若希望迁移，运行 `configure-run` 并保留需要的自定义路径和参数。
 配置和 `prepare` 不连接服务器；`prepare` 冻结因子定义与日期，运行包只包含请求 JSON。
 在线终端中选择因子，再 `/run`，在命令框上方核对参数后按 Enter 提交；仅展开编辑区不会提交。
 完成后 `/results JOB_ID` 才取回真实 Parquet 并显示已提交的本机路径；`/runs` 查看本机交付状态。
@@ -295,7 +299,7 @@ fe-cli run --node A --cpus 2  # 仅此模拟任务使用 A、2 CPU / 6 GB
 | `/init [目录]` | 创建本机工作目录和 CSV，保留已有文件 |
 | `/factor` | 选择已保存的因子；new/edit/delete 管理本机定义 |
 | `/data` | 查看示例字段与口径；不是实际可用数据目录 |
-| `/setup` | 查看本地模式与资源约定；不执行 SSH 检查 |
+| `/status` | 查看本地模式与资源约定；不执行 SSH 检查 |
 | `/help`、`/quit` | 帮助、退出 |
 
 创建后约 2 秒进入模拟运行，约 5 秒结束。状态按墙钟时间推进；

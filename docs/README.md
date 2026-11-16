@@ -6,11 +6,12 @@
 - [Linux 安装与发布](installation.md)：`fe-cli` 入口、curl 安装器、固定工件、升级与回退。
 - [0.1.0 发布记录](releases/0.1.0.md)：源提交、摘要、验收和推广状态。
 - [0.1.1 发布记录](releases/0.1.1.md)：更新提示、自更新、旧版迁移及正式发布身份。
+- [0.2.0 本地候选](releases/0.2.0.md)：首次运行配置、裸字段、status 及配套入口边界，尚未正式发布。
 - [开发记录](development.md)：各阶段实现和历史验证证据。
 - [节点与资源选择](resource_selection.md)：0.3.0 的资源合同。
 - [本机因子库](local_catalog.md)：0.4.0 的初始化、CSV 和定义管理。
 - [单因子真实运行](single_run.md)：显式提交、源合同、真实结果校验与本机交付。
-- [Core 与 CLI 调用范例](core_call_examples.md)：裸字段/col 的入口差异、完整合成计算及管理员排查。
+- [Core 与 CLI 调用范例](core_call_examples.md)：裸字段/col 原样提交、完整合成计算及管理员排查。
 - [远程隔离演练](remote_rehearsal.md)：已发布客户端的真实通信与调度、合成结果及未验收边界。
 - [公共运行版本](public_runtime.md)：公共源码与环境发布、A/C 共享入口及验收记录。
 

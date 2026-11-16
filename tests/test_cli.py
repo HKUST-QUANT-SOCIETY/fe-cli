@@ -14,7 +14,7 @@ from fe_cli import __version__, cli
 from fe_cli.backend import F01_FORMULA, DemoBackend
 from fe_cli.date_range import DateRange, DateRangeStore
 from fe_cli.resources import ResourceRequest, ResourceStore
-from fe_cli.runtime_settings import RuntimeStore
+from fe_cli.runtime_settings import RuntimeSettings, RuntimeStore
 from fe_cli.workspace import Workspace
 
 
@@ -158,6 +158,7 @@ def test_init_creates_workspace_and_preserves_existing_edits(tmp_path, capsys):
         "created": True,
         "values_directory": str(root / "values"),
         "runs_directory": str(root / "runs"),
+        "runtime_path": str(root / "runtime.json"),
     }
     assert "Edit" in output.err
     assert "factor list" in output.err
@@ -455,8 +456,9 @@ def test_online_queries_are_read_only_json(
     ("failed", 1),
     ("unknown", 1),
 ])
-def test_online_setup_returns_connection_diagnostic_without_query(
-    tmp_path, capsys, online_client, authentication, exit_code
+@pytest.mark.parametrize("command", ["status", "setup"])
+def test_online_status_returns_connection_diagnostic_without_query(
+    tmp_path, capsys, online_client, authentication, exit_code, command
 ):
     from fe_cli.diagnostics import DiagnosticResult
 
@@ -472,7 +474,7 @@ def test_online_setup_returns_connection_diagnostic_without_query(
     online_client.client.diagnose.return_value = result
 
     assert cli.main([
-        "--online", "--config", str(config), "--state-dir", str(state), "setup"
+        "--online", "--config", str(config), "--state-dir", str(state), command
     ]) == exit_code
 
     output = capsys.readouterr()
@@ -518,7 +520,7 @@ def test_online_disabled_commands_reject_before_loading_config(
 
 
 @pytest.mark.parametrize("missing", ["--data-root", "--release-root", "--release-sha256"])
-def test_configure_run_requires_explicit_server_identity(
+def test_configure_run_uses_standard_defaults_for_omitted_fields(
     tmp_path, capsys, online_client, missing
 ):
     workspace = tmp_path / "workspace"
@@ -533,12 +535,13 @@ def test_configure_run_requires_explicit_server_identity(
         for argument in (key, value)
     ]
 
-    with pytest.raises(SystemExit) as error:
-        cli.main(["--online", "--workspace", str(workspace), "configure-run", *arguments])
-
-    assert error.value.code == 2
-    assert missing in capsys.readouterr().err
-    assert not workspace.exists()
+    assert cli.main([
+        "--online", "--workspace", str(workspace), "configure-run", *arguments
+    ]) == 0
+    runtime = json.loads(capsys.readouterr().out)["runtime"]
+    defaults = RuntimeSettings()
+    field = missing.removeprefix("--").replace("-", "_")
+    assert runtime[field] == getattr(defaults, field)
     online_client.load.assert_not_called()
     online_client.factory.assert_not_called()
 
@@ -617,16 +620,16 @@ def test_prepare_reads_current_csv_and_freezes_local_runtime_without_ssh(
     online_client.factory.assert_not_called()
 
 
-def test_prepare_requires_explicit_runtime_and_creates_no_run(
+def test_prepare_uses_initialized_current_runtime_without_connecting(
     initialized_workspace, capsys, online_client
 ):
     root = initialized_workspace
     Workspace(root).catalog.add(cli.FactorDefinition("f01", "F01", "close", True, ""))
-    assert cli.main(["--workspace", str(root), "prepare", "f01"]) == 1
-    output = capsys.readouterr()
-    assert not output.out
-    assert "configure-run --help" in output.err
-    assert not list((root / "runs").iterdir())
+    assert cli.main(["--workspace", str(root), "prepare", "f01"]) == 0
+    record = json.loads(capsys.readouterr().out)["run"]
+    assert record["status"] == "PREPARED"
+    assert record["runtime"]["release_sha256"] is None
+    assert record["request"]["factor"]["expression"] == "close"
     online_client.load.assert_not_called()
 
 
@@ -827,7 +830,9 @@ def test_online_missing_config_is_handled_without_demo(tmp_path, capsys, monkeyp
     remote.assert_not_called()
 
 
-@pytest.mark.parametrize("command", [["setup"], ["envs"], ["history"], ["history", "full"]])
+@pytest.mark.parametrize("command", [
+    ["status"], ["setup"], ["envs"], ["history"], ["history", "full"],
+])
 def test_online_only_commands_reject_demo_before_creating_state(tmp_path, capsys, command):
     state = tmp_path / "demo-state"
     assert cli.main(["--state-dir", str(state), *command]) == 1

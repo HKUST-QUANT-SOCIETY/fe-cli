@@ -223,7 +223,7 @@ async def test_submit_local_failure_is_certain(tmp_path, payload, request_doc, i
 async def test_legacy_runtime_rejected_before_payload_open_or_ssh_launch(tmp_path, request_doc):
     marker = tmp_path / "launched"
     config = fake_ssh(tmp_path, f"from pathlib import Path\nPath({str(marker)!r}).touch()\n")
-    runtime = RuntimeSettings("/fixture/python", data_root="/fixture/data")
+    runtime = RuntimeSettings("/fixture/python", data_root="/fixture/data", release_root=None)
     with pytest.raises(SubmissionError, match="legacy code-upload mode") as error:
         await JobTransport(config).submit(tmp_path / "missing-payload", request_doc, runtime)
     assert error.value.uncertain is False

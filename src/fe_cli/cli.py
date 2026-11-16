@@ -90,12 +90,19 @@ def _parser() -> argparse.ArgumentParser:
     configure.add_argument("--connect-timeout", type=int, default=10)
     configure.add_argument("--timeout", type=int, default=30)
     runtime = commands.add_parser("configure-run", help="save local server runtime settings")
-    runtime.add_argument("--remote-python", required=True, help="existing server Python path")
-    runtime.add_argument("--data-root", required=True, help="approved server data directory")
-    runtime.add_argument("--node", default="A", metavar="A|C|shared")
-    runtime.add_argument("--release-root", required=True, help="approved public release directory")
+    defaults = RuntimeSettings()
     runtime.add_argument(
-        "--release-sha256", required=True, help="frozen public release manifest SHA-256"
+        "--remote-python", default=defaults.remote_python, help="existing server Python path"
+    )
+    runtime.add_argument(
+        "--data-root", default=defaults.data_root, help="approved server data directory"
+    )
+    runtime.add_argument("--node", default="A", metavar="A|C|shared")
+    runtime.add_argument(
+        "--release-root", default=defaults.release_root, help="approved public release directory"
+    )
+    runtime.add_argument(
+        "--release-sha256", help="optional fixed release SHA-256; omitted selects the current Core"
     )
     runtime.add_argument("--env", default="research", dest="environment")
     runtime.add_argument("--time", default="00:30:00", dest="time_limit")
@@ -107,7 +114,8 @@ def _parser() -> argparse.ArgumentParser:
     date_range.add_argument("start", nargs="?", metavar="START")
     date_range.add_argument("end", nargs="?", metavar="END")
     commands.add_parser(
-        "setup", help="diagnose connection and SSH authentication (requires --online)"
+        "status", aliases=["setup"],
+        help="check SSH connection and authentication (requires --online)"
     )
     commands.add_parser("envs", help="list remote environments (requires --online)")
     history = commands.add_parser(
@@ -168,6 +176,7 @@ def _initialize(args: argparse.Namespace) -> None:
         "created": result.created,
         "values_directory": str(workspace.root / "values"),
         "runs_directory": str(workspace.root / "runs"),
+        "runtime_path": str(workspace.root / "runtime.json"),
     }, ensure_ascii=False))
     print(
         f"Edit {result.csv_path} to maintain factor definitions. "
@@ -338,7 +347,7 @@ def _online(args: argparse.Namespace) -> int:
         print(json.dumps({"demo": False, "receipt": receipt}, ensure_ascii=False))
         return 0
     client = RemoteClient(load_config(args.config))
-    if args.command == "setup":
+    if args.command in {"status", "setup"}:
         result = asyncio.run(client.diagnose())
         print(json.dumps({"demo": False, "diagnostic": asdict(result)}, ensure_ascii=False))
         return 0 if result.ok else 1
@@ -435,7 +444,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.online:
             return _online(args)
-        if args.command in {"setup", "envs", "history", "collect"}:
+        if args.command in {"status", "setup", "envs", "history", "collect"}:
             raise ValueError(f"{args.command} requires --online and connection settings")
         if args.command == "results" and args.request_id is not None:
             raise ValueError("results --request-id requires --online")

@@ -53,7 +53,7 @@ COMMANDS = {
     "/factor": "Browse or manage your local factor library",
     "/init": "Initialize a local factor workspace",
     "/data": "View example fields and data notes",
-    "/setup": "View mode and resource defaults",
+    "/status": "View mode and resource defaults",
     "/help": "Command reference",
     "/quit": "Exit terminal",
 }
@@ -62,7 +62,7 @@ ONLINE_COMMANDS = {
     "/results": "Collect or show one real result",
     "/collect": "Download and validate a completed job result",
     "/runs": "View local single-factor runs",
-    "/setup": "Diagnose SSH connection and authentication",
+    "/status": "Check SSH authorization status",
     "/envs": "List registered server environments",
     "/jobs": "Query current server jobs",
     "/history": "Query server job history: latest 10, or /history full",
@@ -565,12 +565,14 @@ class FactorTerminal(App):
         try:
             parts = shlex.split(line)
             command, args = parts[0], parts[1:]
+            if command == "/setup":
+                command = "/status"
             if self._range_editor is not None and command not in {
-                "/quit", "/help", "/jobs", "/history", "/envs", "/setup", "/results", "/runs",
+                "/quit", "/help", "/jobs", "/history", "/envs", "/status", "/results", "/runs",
             }:
                 raise ValueError("Save the date range or press Esc to cancel before another edit.")
             if self._run_editor is not None and command not in {
-                "/quit", "/help", "/jobs", "/history", "/envs", "/setup", "/results", "/runs",
+                "/quit", "/help", "/jobs", "/history", "/envs", "/status", "/results", "/runs",
             }:
                 raise ValueError("Submit the run or press Esc to cancel before another edit.")
             if command == "/runs":
@@ -584,7 +586,7 @@ class FactorTerminal(App):
                 "/jobs",
                 "/history",
                 "/envs",
-                "/setup",
+                "/status",
             }:
                 raise ValueError("Save the factor or press Esc to cancel before another edit.")
             if command in {"/init", "/factor"}:
@@ -624,7 +626,7 @@ class FactorTerminal(App):
                     raise ValueError("Usage: /cancel job-id")
                 job = self.backend.cancel(args[0])
                 self.write(f"Cancelled local demo job {job.id}.")
-            elif command == "/setup":
+            elif command == "/status":
                 self.write(
                     "Mode: local demo. SSH access is not checked in this mode.\n"
                     f"Next task: {self.resource_summary()}. "
@@ -899,7 +901,7 @@ class FactorTerminal(App):
         else:
             self._query_pending = True
             self.query_online(
-                "ssh-diagnostic" if command == "/setup" else REMOTE_QUERIES[command],
+                "ssh-diagnostic" if command == "/status" else REMOTE_QUERIES[command],
                 history_limit=10 if command == "/history" and not args else None,
             )
 
@@ -911,7 +913,7 @@ class FactorTerminal(App):
         self._connection_status = "Querying"
         self.home.query_one("#mode", Static).update(self.mode_text())
         self.write(
-            "Checking SSH connection and authentication…"
+            "Checking SSH authorization status…"
             if command == "ssh-diagnostic"
             else f"Querying server · {command}",
             MUTED,
@@ -919,7 +921,7 @@ class FactorTerminal(App):
         try:
             if command == "ssh-diagnostic":
                 result = await self.online.diagnose()
-                self.write("SSH connection & authentication", BLUE)
+                self.write("SSH authorization status", BLUE)
                 self.write(f"Target  {result.host}:{result.port}")
                 self.write(f"Account  {result.user or '(from SSH config)'}")
                 self.write(f"Connection  {result.connection}")

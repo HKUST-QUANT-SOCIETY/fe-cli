@@ -3,6 +3,7 @@ import io
 import json
 import tarfile
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
 from datetime import date
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import pytest
 from fe_cli.archive_io import MAX_ARCHIVE_BYTES, MAX_ARCHIVE_FILES, unpack_result
 from fe_cli.delivery import DeliveryStore, ExecutionFailed
 from fe_cli.run_contract import PROTOCOL, RESULT_SCHEMA, make_request, request_digest
+from fe_cli.runtime_settings import RuntimeSettings
 from fe_cli.workspace import Workspace
 
 
@@ -149,6 +151,34 @@ def archive(
                 member.size = len(data)
                 handle.addfile(member, io.BytesIO(data))
     return destination, manifest
+
+
+@pytest.mark.parametrize("missing", [None, "release_sha256", "engine_commit", "core_wheel"])
+def test_current_core_result_requires_resolved_release_identity(
+    tmp_path, run_request, store, missing
+):
+    run_request["runtime"] = asdict(RuntimeSettings())
+
+    def identity(manifest):
+        manifest["engine"].update(
+            release_sha256="1" * 64,
+            engine_commit="2" * 40,
+            core_wheel={"path": "factor_engine-0.5.1-py3-none-any.whl",
+                        "sha256": "3" * 64, "bytes": 123},
+        )
+        if missing:
+            manifest["engine"].pop(missing)
+
+    source, manifest = archive(tmp_path, run_request, mutate=identity)
+    if missing:
+        with pytest.raises(ValueError, match="provenance"):
+            store.import_archive(source, expected_request=run_request, expected_job_id="123")
+        assert not list(store.workspace.values_path.glob("*/*/*/result.parquet"))
+    else:
+        receipt = store.import_archive(source, expected_request=run_request, expected_job_id="123")
+        saved = json.loads(Path(receipt["manifest_path"]).read_text())
+        assert saved["request"] == run_request
+        assert saved["engine"] == manifest["engine"]
 
 
 def test_real_parquet_roundtrip_and_prepared_files_preserved(tmp_path, run_request, store):

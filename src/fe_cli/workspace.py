@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fe_cli.catalog import CSV_HEADERS, FactorCatalog
+from fe_cli.runtime_settings import RuntimeStore
 
 _README = """# Local factor workspace
 
@@ -18,13 +19,18 @@ Editing definitions does not evaluate expressions or validate Factor Engine DSL.
 ## Files
 
 - `factors.csv`: editable UTF-8 standard CSV, initially containing only its header.
-- `runtime.json`: explicitly configured server release, Python and data location.
+- `runtime.json`: standard server Python, Core entry and data location.
 - `runs/`: frozen requests, submission state, result manifests and commit receipts.
 - `values/FACTOR_ID/DEFINITION_HASH/REQUEST_ID/result.parquet`: immutable local values
   published only after a real result passes validation.
 
-Use `fe configure-run --help` to configure the approved server release, manifest
-digest, Python and data directory provided by your administrator.
+Initialization configures `/public/fe-core-env/bin/python`, `/public/fe-core`,
+`/srv/quant/data/shared/ashare_lqtp_data` and node `quant-a`. New runs use the
+server's current Core release; you do not need to configure a release digest
+manually after Core updates. Initialization only writes local files and does not
+connect to SSH or install anything on the server.
+Use `fe configure-run --help` to customize approved server paths or pin a release
+digest. Existing valid runtime settings are preserved by repeated initialization.
 Use `fe --online run ID` to submit one saved factor, then `fe --online results JOB_ID`
 after completion to download and validate its values. Incremental runs and run-all
 are not supported yet. Default demo mode only simulates runs.
@@ -69,6 +75,7 @@ class Workspace:
         self.values_path = self.root / "values"
         self.runs_path = self.root / "runs"
         self.readme_path = self.root / "README.md"
+        self.runtime_store = RuntimeStore(self.root)
 
     @property
     def catalog(self) -> FactorCatalog:
@@ -78,11 +85,13 @@ class Workspace:
         for directory in (self.root, self.values_path, self.runs_path):
             if (directory.exists() or directory.is_symlink()) and not directory.is_dir():
                 raise ValueError(f"Workspace directory is occupied by a file: {directory}.")
-        for file in (self.catalog_path, self.readme_path):
+        for file in (self.catalog_path, self.readme_path, self.runtime_store.path):
             if file.is_symlink() or (file.exists() and not file.is_file()):
                 raise ValueError(f"Workspace file is occupied by another entry: {file}.")
         if self.catalog_path.exists():
             self.catalog.list()
+        if self.runtime_store.path.exists():
+            self.runtime_store.load()
 
     @staticmethod
     def _create_file(path: Path, content: str) -> bool:
@@ -109,5 +118,6 @@ class Workspace:
         # Recheck races before writing README, including a catalog created by another init.
         self._check_existing()
         created = self._create_file(self.readme_path, _README) or created
+        created = self.runtime_store.initialize() or created
         self._check_existing()
         return InitResult(self.root, self.catalog_path, self.readme_path, created)

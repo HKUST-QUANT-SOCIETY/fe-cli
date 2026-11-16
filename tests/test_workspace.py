@@ -5,6 +5,7 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from fe_cli.catalog import CSV_HEADERS, FactorDefinition
+from fe_cli.runtime_settings import RuntimeSettings, RuntimeStore
 from fe_cli.workspace import Workspace
 
 
@@ -21,10 +22,14 @@ def test_initialization_creates_header_only_private_csv_and_reserved_directories
     assert stat.S_IMODE(workspace.catalog_path.stat().st_mode) == 0o600
     assert workspace.values_path.is_dir()
     assert workspace.runs_path.is_dir()
+    runtime_path = workspace.root / "runtime.json"
+    assert RuntimeStore(workspace.root).load() == RuntimeSettings()
+    assert stat.S_IMODE(runtime_path.stat().st_mode) == 0o600
     readme = workspace.readme_path.read_text()
     assert "local factor definitions" in readme
     assert "immutable local values" in readme
     assert "fe --online run ID" in readme
+    assert "do not need to configure a release digest" in readme
     with pytest.raises(FrozenInstanceError):
         result.created = False
 
@@ -43,7 +48,15 @@ def test_idempotent_existing_files_preserved_byte_for_byte(tmp_path):
     csv = b"\xef\xbb\xbffactor_id,name,expression,enabled,description\na,Alpha,x,1,\n"
     workspace.catalog_path.write_bytes(csv)
     workspace.readme_path.write_bytes(b"User's own documentation\n")
-    before = {path: path.read_bytes() for path in (workspace.catalog_path, workspace.readme_path)}
+    runtime = RuntimeStore(workspace.root)
+    runtime.save(RuntimeSettings(
+        remote_python="/custom/python", data_root="/custom/data", node="quant-c",
+        release_root="/custom/release", release_sha256="ab" * 32,
+    ))
+    before = {
+        path: path.read_bytes()
+        for path in (workspace.catalog_path, workspace.readme_path, runtime.path)
+    }
     assert workspace.initialize().created is False
     assert {path: path.read_bytes() for path in before} == before
 
@@ -60,9 +73,28 @@ def test_partial_workspace_completed_without_replacing_catalog(tmp_path):
     assert workspace.catalog.list() == [FactorDefinition("a", "Alpha", "x", True, "existing")]
     assert workspace.runs_path.is_dir()
     assert workspace.readme_path.exists()
+    assert RuntimeStore(workspace.root).load() == RuntimeSettings()
 
 
-@pytest.mark.parametrize("entry", ["root", "values", "runs", "catalog", "readme"])
+def test_existing_workspace_missing_only_runtime_gets_standard_settings(tmp_path):
+    workspace = Workspace(tmp_path)
+    workspace.initialize()
+    runtime = RuntimeStore(workspace.root)
+    runtime.path.unlink()
+    before = {
+        path: path.read_bytes() for path in (workspace.catalog_path, workspace.readme_path)
+    }
+
+    assert workspace.initialize().created is True
+
+    assert runtime.load() == RuntimeSettings()
+    assert {path: path.read_bytes() for path in before} == before
+    saved = runtime.path.read_bytes()
+    assert workspace.initialize().created is False
+    assert runtime.path.read_bytes() == saved
+
+
+@pytest.mark.parametrize("entry", ["root", "values", "runs", "catalog", "readme", "runtime"])
 def test_path_collisions_are_refused_before_other_creation(tmp_path, entry):
     root = tmp_path / "workspace"
     workspace = Workspace(root)
@@ -74,8 +106,9 @@ def test_path_collisions_are_refused_before_other_creation(tmp_path, entry):
         collision = {
             "values": workspace.values_path, "runs": workspace.runs_path,
             "catalog": workspace.catalog_path, "readme": workspace.readme_path,
+            "runtime": workspace.runtime_store.path,
         }[entry]
-        if entry in {"catalog", "readme"}:
+        if entry in {"catalog", "readme", "runtime"}:
             collision.mkdir()
         else:
             collision.write_text("occupied")
@@ -109,3 +142,32 @@ def test_symlink_catalog_is_refused_without_changing_target(tmp_path):
         workspace.initialize()
     assert target.read_text() == ",".join(CSV_HEADERS) + "\n"
     assert not workspace.values_path.exists()
+
+
+@pytest.mark.parametrize("invalid", [b"{broken", b'{"version":1,"runtime":{}}'])
+def test_invalid_runtime_is_refused_before_completing_workspace(tmp_path, invalid):
+    workspace = Workspace(tmp_path)
+    runtime = RuntimeStore(workspace.root)
+    runtime.path.write_bytes(invalid)
+
+    with pytest.raises(ValueError, match="Invalid runtime settings"):
+        workspace.initialize()
+
+    assert runtime.path.read_bytes() == invalid
+    assert list(tmp_path.iterdir()) == [runtime.path]
+
+
+def test_symlink_runtime_is_refused_without_changing_target(tmp_path):
+    target_store = RuntimeStore(tmp_path)
+    target_store.save(RuntimeSettings())
+    original = target_store.path.read_bytes()
+    workspace = Workspace(tmp_path / "workspace")
+    workspace.root.mkdir()
+    runtime = RuntimeStore(workspace.root)
+    runtime.path.symlink_to(target_store.path)
+
+    with pytest.raises(ValueError, match="occupied"):
+        workspace.initialize()
+
+    assert target_store.path.read_bytes() == original
+    assert list(workspace.root.iterdir()) == [runtime.path]

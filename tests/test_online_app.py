@@ -47,6 +47,8 @@ async def test_online_startup_has_no_connection_or_demo_state(monkeypatch):
         assert app.query_one("#commands", OptionList).option_count == 15
         assert "/history-full" not in app.commands
         assert "/run" in app.commands
+        assert "/status" in app.commands
+        assert "/setup" not in app.commands
 
 
 @pytest.mark.parametrize(
@@ -188,7 +190,8 @@ async def test_invalid_history_command_never_queries(value):
     "connection,authentication",
     [("connected", "authenticated"), ("connected", "failed"), ("failed", "unknown")],
 )
-async def test_setup_diagnoses_without_environment_query(connection, authentication):
+@pytest.mark.parametrize("value", ["/status", "/setup"])
+async def test_status_diagnoses_without_environment_query(value, connection, authentication):
     remote = client()
     remote.diagnose.return_value = DiagnosticResult(
         "cluster.example",
@@ -202,10 +205,10 @@ async def test_setup_diagnoses_without_environment_query(connection, authenticat
     )
     app = FactorTerminal(online=remote)
     async with app.run_test() as pilot:
-        await command(app, pilot, "/setup")
+        await command(app, pilot, value)
         await app.workers.wait_for_complete()
         output = transcript(app)
-        assert "SSH connection & authentication" in output
+        assert "SSH authorization status" in output
         assert authentication in output
         assert "cluster.example:22" in output
         assert ("SHA256:accepted-test-key" in output) == (authentication == "authenticated")
@@ -213,3 +216,24 @@ async def test_setup_diagnoses_without_environment_query(connection, authenticat
         remote.diagnose.assert_awaited_once_with()
         remote.query.assert_not_called()
         assert not app._query_pending
+
+
+@pytest.mark.parametrize("value", ["/status extra", "/setup extra"])
+async def test_status_rejects_arguments_without_remote_calls(value):
+    remote = client()
+    app = FactorTerminal(online=remote)
+    async with app.run_test() as pilot:
+        await command(app, pilot, value)
+        assert "/status takes no arguments." in transcript(app)
+        remote.diagnose.assert_not_called()
+        remote.query.assert_not_called()
+
+
+async def test_status_is_the_visible_online_help_command():
+    app = FactorTerminal(online=client())
+    async with app.run_test() as pilot:
+        await command(app, pilot, "/help")
+        output = transcript(app)
+        assert "/status" in output
+        assert "Check SSH authorization status" in output
+        assert "/setup" not in output

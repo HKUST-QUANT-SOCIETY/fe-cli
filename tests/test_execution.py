@@ -153,11 +153,35 @@ async def test_collection_failure_keeps_submission_and_reports_no_values(workspa
     assert not list(workspace.values_path.iterdir())
 
 
-async def test_bare_native_fields_fail_before_submission_or_allocation(workspace):
+@pytest.mark.parametrize("expression", [
+    "ts_mean(ret, 3) + pb_ratio",
+    'ts_mean(col("ret"), 3) + col("pb_ratio")',
+    "ts_mean(ret, window=3) + pb_ratio",
+    'ts_mean(col("ret"), window=3) + col("pb_ratio")',
+])
+async def test_field_spellings_are_submitted_without_rewriting(workspace, expression):
+    transport = AsyncMock()
+    transport.submit.return_value = "123"
+    service = RunService(workspace, transport=transport)
+    factor = workspace.catalog.update("mean3", expression=expression)
+    csv_before = workspace.catalog_path.read_bytes()
+    record = await service.submit(factor, ResourceRequest(), "2026-01-03", "2026-01-05")
+    transport.submit.assert_awaited_once()
+    sent = transport.submit.call_args.args[1]
+    assert sent["factor"]["expression"] == expression
+    assert sent["factor"]["definition_hash"] == factor.definition_hash
+    with tarfile.open(record["bundle_path"]) as archive:
+        assert archive.getnames() == ["request.json"]
+        assert json.load(archive.extractfile("request.json")) == sent
+    assert service.get(record["request_id"])["request"] == sent
+    assert workspace.catalog_path.read_bytes() == csv_before
+
+
+async def test_invalid_formula_syntax_fails_before_submission_or_allocation(workspace):
     transport = AsyncMock()
     service = RunService(workspace, transport=transport)
-    workspace.catalog.update("mean3", expression="ts_mean(ret, 3) + pb_ratio")
-    with pytest.raises(ValueError, match=r'col\("pb_ratio"\).*col\("ret"\)'):
+    workspace.catalog.update("mean3", expression="ts_mean(ret,")
+    with pytest.raises(ValueError, match="not valid DSL syntax"):
         await service.submit(
             workspace.catalog.get("mean3"), ResourceRequest(), "2026-01-03", "2026-01-05"
         )
@@ -203,7 +227,9 @@ async def test_verified_failure_recovers_unknown_job_without_values(
     recovered = service.get("1308")
     assert recovered["status"] == "EXECUTION_FAILED"
     assert recovered["timing"] == {"elapsed_seconds": 0.125}
-    assert 'col("ret")' in recovered["error"]
+    assert recovered["error"] == (
+        "Job 1308 failed: NativeCompileError: catalog-bound FieldRef requires col"
+    )
     failure_path = workspace.runs_path / record["request_id"] / "failure.json"
     assert json.loads(failure_path.read_bytes()) == manifest
     assert not list(workspace.values_path.glob("*/*/*/result.parquet"))

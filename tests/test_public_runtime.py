@@ -100,7 +100,6 @@ def test_submission_rejects_release_different_from_frozen_request(workspace, fie
     "changes",
     [
         {"release_root": None},
-        {"release_sha256": None},
         {"release_root": "relative/release"},
         {"release_root": "/public/fe/../release"},
         {"release_root": "/public/fe/release\n"},
@@ -120,9 +119,37 @@ def test_release_root_can_use_another_approved_absolute_directory():
     assert public_settings(release_root="/approved release's/root").release_root.startswith("/")
 
 
+def test_standard_runtime_defaults_follow_current_core_and_roundtrip(tmp_path):
+    runtime = RuntimeSettings()
+    assert runtime.remote_python == "/public/fe-core-env/bin/python"
+    assert runtime.data_root == "/srv/quant/data/shared/ashare_lqtp_data"
+    assert runtime.release_root == "/public/fe-core"
+    assert runtime.release_sha256 is None
+    assert runtime.node == "quant-a"
+    assert runtime.environment == "research"
+    assert runtime.time_limit == "00:30:00"
+    store = RuntimeStore(tmp_path)
+    store.save(runtime)
+    assert store.load() == runtime
+
+
+def test_current_release_and_existing_pinned_runtime_remain_readable(tmp_path):
+    current = public_settings(release_sha256=None)
+    store = RuntimeStore(tmp_path)
+    store.save(current)
+    assert store.load() == current
+    pinned = public_settings()
+    original = json.dumps({"version": 1, "runtime": asdict(pinned)}).encode()
+    store.path.write_bytes(original)
+    assert store.load() == pinned
+    assert store.path.read_bytes() == original
+
+
 def test_legacy_settings_load_but_new_preparation_and_submission_are_rejected(workspace):
     store = RuntimeStore(workspace.root)
-    legacy = asdict(RuntimeSettings("/legacy/env/bin/python", data_root="/fixture/data"))
+    legacy = asdict(RuntimeSettings(
+        "/legacy/env/bin/python", data_root="/fixture/data", release_root=None,
+    ))
     legacy.pop("release_root")
     legacy.pop("release_sha256")
     store.path.write_text(json.dumps({"version": 1, "runtime": legacy}))
@@ -141,7 +168,9 @@ def test_legacy_settings_load_but_new_preparation_and_submission_are_rejected(wo
     with pytest.raises(ValueError, match="legacy code-upload mode"):
         build_submit_argv(ConnectionConfig("fixture.invalid"), record["request"], loaded)
     with pytest.raises(ValueError, match="Runtime node"):
-        RuntimeSettings("/legacy/python", data_root="/fixture/data", node="shared")
+        RuntimeSettings(
+            "/legacy/python", data_root="/fixture/data", node="shared", release_root=None,
+        )
 
 
 def test_configure_public_release_is_local_and_loads_roundtrip(workspace, monkeypatch, capsys):

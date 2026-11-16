@@ -36,6 +36,8 @@ async def test_terminal_layout_and_menu(tmp_path: Path, size: tuple[int, int]) -
         await pilot.press("/")
         menu = app.query_one("#commands", OptionList)
         assert menu.display and menu.option_count == 14
+        assert "/status" in app.commands
+        assert "/setup" not in app.commands
         await pilot.press("down", "tab")
         assert field.value == "/jobs "
         await pilot.press("enter")
@@ -43,6 +45,19 @@ async def test_terminal_layout_and_menu(tmp_path: Path, size: tuple[int, int]) -
         assert not menu.display
         assert field.region.bottom <= size[1]
         assert app.query_one("#transcript", RichLog).region.height >= 3
+
+
+@pytest.mark.parametrize("value", ["/status", "/setup"])
+async def test_demo_status_reports_local_defaults_without_creating_jobs(tmp_path, value):
+    backend = DemoBackend(tmp_path)
+    app = FactorTerminal(backend=backend)
+    async with app.run_test() as pilot:
+        app.query_one("#command", Input).value = value
+        await pilot.press("enter")
+        output = "\n".join(line.text for line in app.query_one("#transcript", RichLog).lines)
+        assert "Mode: local demo. SSH access is not checked in this mode." in output
+        assert "Next task:" in output
+        assert not backend.jobs()
 
 
 async def test_inline_command_arguments_are_hints_only(tmp_path: Path) -> None:

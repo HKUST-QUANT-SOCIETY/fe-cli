@@ -22,11 +22,6 @@ from fe_cli.runtime_settings import RuntimeSettings, RuntimeStore
 from fe_cli.workspace import Workspace
 
 _REQUEST_ID = re.compile(r"[a-f0-9]{32}\Z")
-# Public DSL names only; source mapping and data conversion belong to the server.
-_DSL_FIELDS = frozenset({
-    "open", "high", "low", "close", "pre_close", "ret", "volume", "amount",
-    "pb_ratio", "pe_ratio", "ps_ratio", "pcf_ratio", "turnover_ratio",
-})
 
 
 def atomic_json(path: Path, value: dict) -> None:
@@ -72,9 +67,9 @@ class RunService:
         if not factor.enabled:
             raise ValueError("Disabled factors cannot run")
         runtime = self.settings or RuntimeStore(self.workspace.root).load()
-        if not runtime.release_root or not runtime.release_sha256:
+        if not runtime.release_root:
             raise ValueError(
-                "Configure authorized server release_root and release_sha256 with configure-run; "
+                "Configure an authorized server release_root with configure-run; "
                 "legacy code-upload mode is no longer supported."
             )
         if not runtime.data_root:
@@ -86,16 +81,9 @@ class RunService:
                 f"This runtime is configured for {runtime.node}; select that node or configure-run."
             )
         try:
-            syntax = ast.parse(factor.expression, mode="eval")
+            ast.parse(factor.expression, mode="eval")
         except (SyntaxError, ValueError) as exc:
             raise ValueError("Expression is not valid DSL syntax") from exc
-        bare = sorted({
-            node.id for node in ast.walk(syntax)
-            if isinstance(node, ast.Name) and node.id in _DSL_FIELDS
-        })
-        if bare:
-            columns = ", ".join(f'col("{name}")' for name in bare)
-            raise ValueError(f"Disk-source expressions require {columns} instead of bare fields.")
         request = make_request(
             asdict(factor) | {"definition_hash": factor.definition_hash},
             asdict(resources) | {"memory": resources.memory},
@@ -268,8 +256,6 @@ class RunService:
             record["timing"] = manifest["timing"]
         error = manifest["error"]
         record["error"] = f"Job {record['job_id']} failed: {error['type']}: {error['message']}"
-        if "catalog-bound FieldRef" in error["message"]:
-            record["error"] += ' Use col("ret") / col("pb_ratio") for disk-source fields.'
         atomic_json(self.workspace.runs_path / record["request_id"] / "failure.json", manifest)
         self._save(record)
 

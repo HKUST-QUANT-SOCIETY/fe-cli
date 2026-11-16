@@ -163,6 +163,28 @@ def _validate_provenance(manifest: dict, request: dict, rows: int) -> None:
     text(engine["version"], "engine.version")
     for key in ("compiler_sha256", "package_init_sha256"):
         digest(engine[key], f"engine.{key}")
+    runtime = request.get("runtime", {})
+    if (
+        isinstance(runtime, dict) and runtime.get("release_root")
+        and "release_sha256" in runtime and runtime["release_sha256"] is None
+    ):
+        # Current selects a release at job start; the result must identify that exact release.
+        digest(engine.get("release_sha256"), "engine.release_sha256")
+        commit = engine.get("engine_commit")
+        if not isinstance(commit, str) or not re.fullmatch(r"[a-f0-9]{40}", commit):
+            raise ValueError("Missing or invalid manifest provenance: engine.engine_commit")
+        wheel = engine.get("core_wheel")
+        if not isinstance(wheel, dict) or set(wheel) != {"path", "sha256", "bytes"}:
+            raise ValueError("Missing or invalid manifest provenance: engine.core_wheel")
+        name = wheel["path"]
+        if (
+            not isinstance(name, str) or not name.endswith(".whl")
+            or PurePosixPath(name).name != name or "\\" in name
+            or any(ord(c) < 32 for c in name)
+            or type(wheel["bytes"]) is not int or wheel["bytes"] <= 0
+        ):
+            raise ValueError("Invalid manifest provenance: engine.core_wheel")
+        digest(wheel["sha256"], "engine.core_wheel.sha256")
     if (
         source["version"] != "native_parquet_source_v1"
         or source["manifest_state"] != "FROZEN"

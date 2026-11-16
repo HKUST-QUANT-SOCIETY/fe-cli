@@ -12,12 +12,12 @@ from pathlib import Path, PurePosixPath
 
 @dataclass(frozen=True)
 class RuntimeSettings:
-    remote_python: str
-    data_root: str = ""
+    remote_python: str = "/public/fe-core-env/bin/python"
+    data_root: str = "/srv/quant/data/shared/ashare_lqtp_data"
     node: str = "quant-a"
     environment: str = "research"
     time_limit: str = "00:30:00"
-    release_root: str | None = None
+    release_root: str | None = "/public/fe-core"
     release_sha256: str | None = None
 
     def __post_init__(self) -> None:
@@ -31,8 +31,8 @@ class RuntimeSettings:
                 or any(ord(c) < 32 for c in value)
             ):
                 raise ValueError(f"{field} must be an absolute server path")
-        if (self.release_root is None) != (self.release_sha256 is None):
-            raise ValueError("release_root and release_sha256 must be configured together")
+        if self.release_root is None and self.release_sha256 is not None:
+            raise ValueError("release_sha256 requires release_root")
         if self.release_root is not None:
             if (
                 not isinstance(self.release_root, str)
@@ -41,8 +41,9 @@ class RuntimeSettings:
                 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in self.release_root)
             ):
                 raise ValueError("release_root must be a safe absolute server path")
-            if not isinstance(self.release_sha256, str) or not re.fullmatch(
-                r"[a-f0-9]{64}", self.release_sha256
+            if self.release_sha256 is not None and (
+                not isinstance(self.release_sha256, str)
+                or not re.fullmatch(r"[a-f0-9]{64}", self.release_sha256)
             ):
                 raise ValueError("release_sha256 must be a lowercase SHA-256 digest")
         nodes = {"quant-a", "quant-c"}
@@ -87,9 +88,31 @@ class RuntimeStore:
                 or doc["version"] != 1
             ):
                 raise ValueError("Unsupported runtime settings format")
-            return RuntimeSettings(**doc["runtime"])
+            runtime = doc["runtime"]
+            if not isinstance(runtime, dict) or "remote_python" not in runtime:
+                raise ValueError("Runtime settings must specify remote_python")
+            # Existing version-1 files predate these fields. Preserve their legacy
+            # meaning instead of silently opting them into the standard runtime.
+            return RuntimeSettings(**({
+                "data_root": "", "release_root": None, "release_sha256": None,
+            } | runtime))
         except (ValueError, TypeError, KeyError, RecursionError) as exc:
             raise ValueError(f"Invalid runtime settings at {self.path}: {exc}") from exc
+
+    def initialize(self) -> bool:
+        """Create the standard runtime once, retaining and validating existing files."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            descriptor = os.open(self.path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            self.load()
+            return False
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            json.dump({"version": 1, "runtime": asdict(RuntimeSettings())}, stream, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        return True
 
     def save(self, settings: RuntimeSettings) -> Path:
         if self.path.exists():

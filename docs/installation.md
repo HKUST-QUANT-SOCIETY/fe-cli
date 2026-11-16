@@ -2,6 +2,9 @@
 
 ## 当前状态
 
+当前源码目标为 `0.2.0`，尚未正式发布。其裸字段提交、`status` 和 init 自动运行配置
+需要升级到该版本；下方公开 curl 命令仍安装已发布的 `0.1.1`。
+
 最新正式版本为 `0.1.1`，`fe` 兼容入口保留：
 [GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.1.1)。
 固定提交、工件摘要、安装验收和推广范围见[发布记录](releases/0.1.1.md)，

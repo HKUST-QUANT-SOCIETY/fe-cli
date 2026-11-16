@@ -8,12 +8,12 @@
 | --- | --- | --- |
 | Core `parse_factor` → `FactorEngine`，默认 daily/native | 支持 | 支持 |
 | Core YAML 的 `factor.expr` | 支持 | 支持 |
-| 当前 fe-cli 的 `prepare` / 在线提交 | 已知裸字段在客户端被拒绝 | 使用此写法 |
+| fe-cli 0.2.0 源码的 `prepare` / 在线提交 | 支持，原样提交 | 支持，原样提交 |
+| 已发布 fe-cli 0.1.1 的 `prepare` / 在线提交 | 已知裸字段在客户端被拒绝 | 使用此写法 |
 | fe-cli 保存 CSV / 模拟运行 | 可以保存或演示，不证明能真实计算 | 同样不代表真实计算验收 |
 
-因此，“新版 Core 强制所有公式使用 col”不符合本次核验结果；如果使用当前 fe-cli 提交，
-则客户端确实仍有这个限制。未取得管理员的实际命令、报错和解释器身份，不能直接认定其调用方式有误。
-本次只补充文档，不改变客户端校验、服务器部署或任何计算规则。
+Core 不强制所有公式使用 col。CLI 0.2.0 已移除旧客户端的已知裸字段拦截，保持原始表达式，
+不需要自动补 col。0.2.0 尚未正式发布；管理员若仍遇到该拦截，应核对实际客户端版本和调用入口。
 
 ## Core：把公式作为 DSL 字符串解析
 
@@ -131,17 +131,18 @@ Core YAML 的对应公式也可写为 `factor: {name: mean20_rank, expr: 'rank(t
 
 ## 当前 fe-cli 的调用范例
 
-使用根 README 的安装与初始化流程，然后保存显式 col 公式：
+使用 0.2.0 源码或后续正式包，按根 README 初始化后，可直接保存裸字段公式：
 
 ```bash
 fe-cli init
 fe-cli factor add ret_mean20 --name "Mean return (20d)" \
-  --expression 'ts_mean(col("ret"),20)'
+  --expression 'ts_mean(ret,20)'
 ```
 
-该 ID 已存在时用 `fe-cli factor update ret_mean20 --expression 'ts_mean(col("ret"),20)'`，
-或在交互终端用 `/factor edit ret_mean20`。按根 README 的“单因子真实运行与本机结果”
-配置已获准的服务器解释器、发布目录、摘要与数据目录后，可在本机准备请求：
+该 ID 已存在时用 `fe-cli factor update ret_mean20 --expression 'ts_mean(ret,20)'`，
+或在交互终端用 `/factor edit ret_mean20`。`col("ret")` 写法也保持支持。
+init 会补齐标准运行配置；获准服务器路径不同时用 configure-run 自定义，无需固定 SHA。
+之后可在本机准备请求：
 
 ```bash
 fe-cli prepare ret_mean20 --start 2026-10-01 --end 2026-10-30
@@ -153,9 +154,9 @@ fe-cli prepare ret_mean20 --start 2026-10-01 --end 2026-10-30
 fe-cli --online run ret_mean20 --start 2026-10-01 --end 2026-10-30
 ```
 
-`Disk-source expressions require col(...) instead of bare fields.` 是客户端提交前校验，
-不代表新版 Core 的解析器拒绝裸字段。当前只拦截一组已知字段，其他文本通过此检查也不代表后端支持。
-模拟模式通过也不能代替真实任务验收。
+如果看到 `Disk-source expressions require col(...) instead of bare fields.`，应检查是否仍在使用旧客户端。
+0.2.0 保留基础语法检查，不在客户端执行公式或猜测字段映射；具体字段和算子语义由 Core 验证。
+模拟模式通过不能代替真实任务验收。
 
 ## 管理员排查与核验依据
 
@@ -182,8 +183,8 @@ print(parse_factor("ts_mean(close,20)", name="probe"))
   `tests/polars_single/test_pm_dsl_workflow.py` 定向验证 6 passed，覆盖默认 native、显式 Expr、
   四种写法计算/落湖/回读/重建、裸字段 YAML 物化及实际 native 内核调用。
   在 Core 项目可用 `.venv/bin/python scripts/test_runtime.py --profile pm-workflow` 复跑。
-- CLI 本地 `main`，核验基线 `4a4880316a936ba8422daeb04b3d2af4a269290a`，版本 0.1.1。
-  `src/fe_cli/execution.py` 保留客户端裸字段拒绝；现有提交前拒绝与显式 col 请求准备测试 2 passed。
+- 旧 CLI 0.1.1 基线 `4a488031` 的裸字段拒绝曾由定向测试证实；该历史事实不代表 0.2.0 行为。
+  0.2.0 已增加四种写法的原样提交测试，冻结请求、上传包、定义指纹和 CSV 均保持原始表达式。
 - 本页完整合成示例已用 Core 解释器直接执行通过：四种写法各 26 行、同一 IR、落湖/回读一致。
   以上是本机验证，不代表管理员服务器已升级；
   本次未提交远程作业，也未修改任何已发布安装包。

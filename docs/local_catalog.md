@@ -9,9 +9,18 @@
 fe-cli init
 ```
 
-默认创建 `~/fe-workspace`，包含 `factors.csv`、说明文件、`values/` 和 `runs/`。
+CLI 源码 `0.2.0` 默认创建 `~/fe-workspace`，包含 `factors.csv`、说明文件、
+`runtime.json`、`values/` 和 `runs/`。最新正式客户端仍为 `0.1.1`，
+以下新增默认配置不代表 `0.2.0` 已正式发布或服务器已更新。
 也可执行 `fe-cli init DIRECTORY`，后续通过全局 `--workspace DIRECTORY`
 使用该目录。终端 `/init [目录]` 可切换当前会话的工作目录。
+
+首次初始化的 `runtime.json` 使用服务器 Python `/public/fe-core-env/bin/python`、
+Core 入口 `/public/fe-core`、数据目录 `/srv/quant/data/shared/ashare_lqtp_data`，
+默认 `quant-a` / `research` / 30 分钟，清单摘要为 `null`，表示作业启动时选择当前 Core。
+初始化完全本地进行，不连接或安装服务器，不证明路径和数据权限有效。
+重复初始化保留已有自定义或固定摘要配置；仅含旧解释器的 legacy 配置仍须
+显式迁移后才能准备新任务，见[迁移说明](core_transition.md)。
 
 CSV 初始仅有表头：
 
@@ -41,6 +50,8 @@ fe-cli factor delete ret_mean20
 但不能完全阻止不遵循文件锁的外部编辑器竞争。
 
 保存仅校验字段和 CSV 结构，不执行表达式，不表示服务器语义、数据权限或数值验证通过。
+准备请求时会检查表达式语法；裸字段（如 `ts_mean(ret, 20)`）和 `col()` 写法均原样提交，
+字段和算子语义由服务器 Core 解释，不自动修改已有 CSV。
 可用表达式与字段应以既有服务提供的合同为准。程序自动生成定义指纹，不需手动维护版本列。
 
 ## 与任务和结果的关系
