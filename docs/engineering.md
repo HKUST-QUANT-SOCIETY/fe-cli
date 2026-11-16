@@ -10,6 +10,7 @@
 - 普通查询只允许 `cluster-envs`、`cluster-status`、`cluster-history`；单次运行通过独立的
   `cluster-submit` 和 `cluster-results` 传输入口。禁止隐式连接和任意远程命令。
   显式 `--online run` 或在线 RunEditor 中按 Enter 确认才提交；`results` / `collect` 才下载并校验落值。
+- 服务器更新必须先推送并发布 Core，再由服务器从远端拉取指定发布版本；禁止直接修改服务器源码或上传本地源码补丁。
 - 服务器写入、安装和测试作业需用户明确授权；日常应用的真实提交由使用者显式触发。
   本库只交付客户端，不提供服务器部署器或后端实现。
   在线取消不支持，服务器安装继续由维护者处理；增量、run all 不在本次范围。
