@@ -59,9 +59,6 @@ jobs:
     env:
       FE_CLI_NO_UPDATE_CHECK: "1"
       PYTHONNOUSERSITE: "1"
-      FE_CLI_RELEASE_DIR: ${{ runner.temp }}/fe-release
-      FE_CLI_INSTALL_ROOT: ${{ runner.temp }}/fe installation
-      FE_CLI_BIN_DIR: ${{ runner.temp }}/fe commands
       FE_EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
     defaults:
       run:
@@ -71,6 +68,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Configure temporary installation paths
+        run: |
+          printf 'FE_CLI_RELEASE_DIR=%s/fe-release\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'FE_CLI_INSTALL_ROOT=%s/fe installation\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'FE_CLI_BIN_DIR=%s/fe commands\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Install uv and select Python
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
