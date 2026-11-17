@@ -5,6 +5,10 @@
 版本、组件边界、迭代记录、安装及发布遵循 [Core/CLI 共享维护工作流](shared_release_workflow.md)。
 日常变更先登记根 `CHANGELOG.md` 的 Unreleased，检查点提交与正式发布分开。
 
+- CLI 当前只维护最新正式版本，采用单一正式发布序列，暂不区分用户发布渠道。
+  官方 curl 安装入口统一使用 `releases/latest/download/install.sh`，不提供安装版本或渠道选择；
+  底层脚本仍固定实际版本和工件摘要。
+  历史 Release 保留供下载及追溯，不承诺修复或回补；内部验收、固定版本部署与运维回滚按共享规范修订 4 保留。
 - 使用 `uv sync --locked`、`uv run fe`；Python >=3.12，客户端依赖保持轻量。
 - Linux 与 macOS 共用客户端源码、版本和安装模板；当前正式安装范围及 macOS 开发版边界见
   [安装手册](installation.md#macos-preview)。平台分支集中在安装器，不依赖 GNU 工具在 Mac 上存在；

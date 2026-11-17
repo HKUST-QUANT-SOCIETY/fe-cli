@@ -8,6 +8,20 @@
 历史版本见 [0.1.1 记录](releases/0.1.1.md)、[0.1.0 记录](releases/0.1.0.md)。
 Core、服务器和数据接入不随客户端安装或升级，真实运行须另行配置和验收。
 
+<a id="release-policy"></a>
+
+## 发布与维护范围
+
+CLI 暂不区分发布渠道，仅维护最新正式版；不建立旧版本维护分支或为旧版回补修复。
+官方 curl 安装入口固定为 `releases/latest/download/install.sh`，只选择下载时的最新正式版，
+不提供版本号或渠道参数。新版本发布后入口自动指向该版本，用户无须修改安装命令。
+发布时须将完整验收的新版本标记为 GitHub 的 latest；旧版本不得重新标记为 latest。
+
+历史 Release、标签、附件及发布记录保留供下载、追溯和必要的维护者排查，不覆盖或删除；
+保留可下载状态不代表旧版仍受维护。未发布代码及本地候选包仅用于开发验收，不构成独立用户渠道。
+每份实际安装脚本仍固定自身版本及工件摘要；latest 仅负责选择脚本，一次安装不会混用两次发布的文件。
+本政策不改变 Core 独立编号、服务器固定发布版本部署或既有 workspace 与结果保留规则。
+
 ## 支持范围
 
 - 首版安装器支持 Linux / WSL、x86_64、glibc >= 2.28；不支持 Alpine/musl、ARM、macOS 或 Windows 原生。
@@ -24,7 +38,7 @@ Core、服务器和数据接入不随客户端安装或升级，真实运行须�
 
 当前源码已适配 macOS 14+，包括 Apple Silicon（arm64）及 Intel（x86_64），使用 Python 3.12。
 仍与 Linux 共享同一个客户端版本、通用 wheel、依赖锁及 `install.sh`，不维护独立 Mac 分支。
-正式 `0.2.0` 附件仍是原 Linux 工件，不含此适配；不要在 Mac 上运行上方历史 curl 命令。
+目前 latest 对应的正式 `0.2.0` 附件仍是原 Linux 工件，不含此适配；Mac 须等待适配版本正式发布。
 本轮仅在 Linux 完成兼容分支模拟与回归；两架构的 macOS 原生安装、界面和真实 SSH 链路待验收。
 
 已配置 GitHub 持续验证，在 Linux 及 macOS 的两种 CPU 架构运行测试，并构建固定提交工件、
@@ -71,16 +85,17 @@ Mac 原生验收应覆盖首次/重复安装、升级与回退、带空格路径
 
 ## 安装和启动
 
-免登录安装固定 `0.2.0` 并启动：
+免登录安装最新正式版并启动（本次核对为 `0.2.0`）：
 
 ```bash
-curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.2.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/latest/download/install.sh' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 
 执行上面命令会下载并运行安装脚本；也可以先下载审阅，再执行。
-脚本 SHA256：`433c02cf7772ee5223f28f9602242c2438510e7a986031e6d9d1f896b4fbb9b1`。
-也可以下载 Release 全部附件，从核对摘要后的本地目录安装：
+本次下载到的 `0.2.0` 脚本 SHA256：`433c02cf7772ee5223f28f9602242c2438510e7a986031e6d9d1f896b4fbb9b1`。
+该摘要仅对应这一固定工件，后续最新版本的摘要以对应发布记录为准。
+维护者也可下载最新 Release 全部附件，从核对摘要后的本地目录验收安装：
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -90,7 +105,7 @@ fe-cli --version
 fe-cli
 ```
 
-每份安装脚本固定版本和 wheel、依赖清单、发布清单摘要，不随 latest 变化安装另一版本。
+每份安装脚本固定版本和 wheel、依赖清单、发布清单摘要；脚本下载后不随 latest 变化安装另一版本。
 摘要用于校验所下载内容与脚本一致；安装脚本本身的可信度依赖下载渠道及维护者公布的摘要。
 
 默认安装入口为 `~/.local/bin/fe-cli`，版本环境在
@@ -99,7 +114,7 @@ fe-cli
 shell 配置后，新终端即可直接执行 `fe-cli`；当前 shell 的 PATH 需要显式 export。
 可通过绝对路径 `FE_CLI_BIN_DIR` 和 `FE_CLI_INSTALL_ROOT` 自定义安装位置。
 
-不需要安装器时，也可使用项目 uv 工具流程安装已校验的 wheel：
+维护者不使用安装器验收工件时，也可用项目 uv 工具流程安装已校验的 wheel（以下以 `0.2.0` 为例）：
 
 ```bash
 uv tool install --python 3.12 --constraints requirements.txt ./fe_cli-0.2.0-py3-none-any.whl
@@ -147,23 +162,24 @@ SSH、服务器运行环境、节点/资源/日期、真实 run/results 操作�
 本功能依据 GitHub 发布渠道身份校验，并不提供独立签名密钥体系。
 
 旧 `0.1.0` 既没有更新命令，也没有新的安装归属记录：
-先运行当前固定安装脚本完成一次迁移，之后即可使用 `--update`。
+先运行官方最新版 curl 安装命令完成一次迁移，之后即可使用 `--update`。
 `uv tool`、pip 或源码安装应沿用原安装方式升级；自更新不会覆盖它们的环境或入口。
 自定义安装路径由安装器记录，升级继续使用相同位置。
 
-## 升级、旧实验版与回退
+## 升级与历史工件
 
-运行目标版本的安装脚本即可切换入口；新环境完成安装并检查版本后才替换入口。
+重新运行官方 curl 安装命令或显式执行 `fe-cli --update` 升级到最新正式版；
+新环境完成安装并检查版本后才替换入口。
 旧版本环境、workspace、因子 CSV、配置和历史结果均保留。同一工件重复安装复用已完成环境。
 安装失败不会切换现有入口；未完成环境保留并报错，可指定新的 `FE_CLI_INSTALL_ROOT`，
 不自动删除或重建既有环境。异常中断遗留的 `.install-lock` 需要先确认没有安装进程，再人工处理。
 
-首次从旧实验 `0.5.4` 切换到受管理 `0.1.0` 时，需明确选择 `0.1.0` 工件，
-版本排序不能代表迁移。若此前使用 `uv tool install`，先用 `uv tool uninstall fe-cli`
-移除旧工具入口，再使用新安装器；这不删除 workspace。安装器不会覆盖其他来源的同名命令。
+旧实验 `0.5.4` 的版本排序高于受管理正式版，迁移应显式使用当前最新版 curl 入口，
+不能依赖普通升级排序判断。若此前使用 `uv tool install`，先显式处理原工具入口，
+再使用官方安装器；安装器不会覆盖其他来源的同名命令，也不删除 workspace。
 
-回退时运行先前保存且已校验的安装脚本，或直接执行保留版本环境中的 `bin/fe-cli`。
-回退客户端不会回退服务器或迁移后的数据；本次安装不改变配置/schema 和数值语义。
+历史附件和本机已保留的环境仅用于追溯或维护者必要的故障恢复，不提供面向用户的历史版本选择或维护承诺。
+维护者恢复旧客户端不会回退服务器或迁移后的数据，不保证旧版兼容当前服务器。
 卸载时只处理确认归属的命令入口与安装目录；不删除 workspace、XDG 配置或历史结果。
 
 ## 维护者构建与推广
@@ -186,8 +202,10 @@ uv run scripts/build_cli_release.py --ref HEAD \
 公开前核对下载仓库的公开范围，包括完整历史及旧服务端适配代码；本地模式密钥扫描不能
 替代完整审计。GitHub 写入由维护者通过本机 gh 执行，每次写前确认账号为 Polaris-YC。
 标签须指向清单 source_commit；不得覆盖既有版本、标签或 Release 附件。
-正式发布需同步实际下载地址、版本日志、验收范围和独立推广记录。
+正式发布前先完成全部附件及验收，再发布并设置为 latest；核对官方 curl 入口与 `--update`
+指向同一正式版本。正式发布需同步实际下载地址、版本日志、验收范围和发布记录；历史版本只归档、不回补修复。
 
 参考：[GitHub 发布 API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release)、
+[GitHub 最新版附件链接](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases)、
 [uv 安装器选项](https://docs.astral.sh/uv/reference/installer/)、
 [项目维护规范](shared_release_workflow.md)。

@@ -5,6 +5,11 @@
 
 ## Unreleased
 
+### Changed
+
+- CLI 官方 curl 安装入口统一指向 GitHub 最新正式 Release，不提供版本或渠道选择；
+  仅维护最新正式版，历史 Release 保留供下载和追溯，不提供旧版修复。
+
 ### Added
 
 - macOS 14+（Apple Silicon / Intel）安装器适配，与 Linux 共用客户端和版本；

@@ -15,6 +15,9 @@
 
 ## 近期迭代
 
+- 2026-11-17：CLI 统一从固定 curl 入口安装最新正式版，暂不区分发布渠道；仅维护最新版，
+  历史 Release 保留供下载和追溯。见[安装与维护范围](docs/installation.md#release-policy)。
+
 - 2026-11-17：新增 macOS 14+（Apple Silicon / Intel）的安装适配及两架构持续验证配置，
   与 Linux 共用代码和版本；固定提交试用包已通过 Linux 安装和重复安装检查，Mac 原生验收及发布待完成。
   见[安装手册](docs/installation.md#macos-preview)
@@ -40,11 +43,11 @@
 不需要 sudo 或克隆源码：
 
 ```bash
-curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.2.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
+curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/latest/download/install.sh' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
 
-以上 `0.2.0` 正式安装器仍只支持 Linux。当前开发版已增加 macOS 14+ 的 Apple Silicon / Intel
+目前最新正式安装器（`0.2.0`）仍只支持 Linux。当前开发版已增加 macOS 14+ 的 Apple Silicon / Intel
 适配，尚未正式发布或完成原生验收；Mac 本地试用方式见[安装手册](docs/installation.md#macos-preview)。
 
 输入 `/` 打开菜单，使用上下键选择、Tab 补全、Enter 执行。
@@ -63,7 +66,8 @@ Ctrl+C / F8 发送复制请求，Esc 或 F2 返回。选择期间固定当前文
 短会话贴近输入区显示；命令结果通过留白、文字层级和少量薄荷绿、淡蓝、杏色区分。
 
 默认安装到用户目录；需要在新终端继续使用时，请确保 `~/.local/bin` 已加入 shell 的 PATH。
-支持范围、固定工件安装、升级和回退见[安装手册](docs/installation.md)。
+官方 curl 入口仅安装最新正式版，不提供版本或渠道选择。历史 Release 保留，不再维护或回补修复。
+支持范围、升级及历史工件说明见[安装手册](docs/installation.md)。
 
 ## 客户端更新
 
