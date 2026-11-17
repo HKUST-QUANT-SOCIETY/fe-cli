@@ -9,8 +9,40 @@ permissions:
   contents: read
 
 jobs:
+  build:
+    name: Build shared candidate assets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv and select Python
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.11.28"
+          python-version: "3.12"
+          require-checksums: true
+          enable-cache: false
+      - name: Build fixed-commit installation assets once
+        env:
+          FE_BUILD_REPOSITORY: ${{ github.repository }}
+        run: |
+          uv run --locked --no-dev python scripts/build_cli_release.py \
+            --ref HEAD --repository "$FE_BUILD_REPOSITORY" \
+            --output "$RUNNER_TEMP/fe-release"
+      - name: Preserve the candidate assets for validation and release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-assets
+          path: ${{ runner.temp }}/fe-release/
+          retention-days: 7
+          if-no-files-found: error
+
   validate:
     name: ${{ matrix.os }} / Python 3.12
+    needs: build
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -52,13 +84,39 @@ jobs:
         run: uv run --locked ruff check .
       - name: Run tests
         run: uv run --locked pytest -q
-      - name: Build fixed-commit installation assets
-        env:
-          FE_BUILD_REPOSITORY: ${{ github.repository }}
+      - name: Download the shared candidate assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-assets
+          path: ${{ runner.temp }}/fe-release
+      - name: Verify shared assets and source identity before installation
         run: |
-          uv run --locked python scripts/build_cli_release.py \
-            --ref HEAD --repository "$FE_BUILD_REPOSITORY" \
-            --output "$RUNNER_TEMP/fe-release"
+          uv run --locked python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          assets = Path(os.environ["FE_CLI_RELEASE_DIR"])
+          manifest = json.loads((assets / "release.json").read_text())
+          source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert manifest["source_commit"] == source == os.environ["GITHUB_SHA"]
+          assert manifest["product"] == "fe-cli"
+          assert manifest["schema"] == "fe-cli-install-release-v1"
+          assert manifest["download_repository"] == os.environ["GITHUB_REPOSITORY"]
+          version = manifest["version"]
+          expected = {f"fe_cli-{version}-py3-none-any.whl", f"fe_cli-{version}.tar.gz",
+                      "requirements.txt", "release.json", "install.sh"}
+          assert {path.name for path in assets.iterdir()} == expected | {"SHA256SUMS"}
+          checksums = dict(line.split("  ", 1)[::-1]
+                           for line in (assets / "SHA256SUMS").read_text().splitlines())
+          assert set(checksums) == expected
+          for name, digest in checksums.items():
+              assert hashlib.sha256((assets / name).read_bytes()).hexdigest() == digest, name
+          print(f"Verified shared candidate {version} from {source}")
+          print((assets / "SHA256SUMS").read_text())
+          PY
       - name: Install wheel through the release installer
         run: sh "$FE_CLI_RELEASE_DIR/install.sh"
       - name: Check installed local user paths outside source

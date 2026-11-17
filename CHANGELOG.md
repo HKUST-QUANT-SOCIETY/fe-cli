@@ -5,6 +5,8 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-11-17
+
 ### Changed
 
 - CLI 官方 curl 安装入口统一指向 GitHub 最新正式 Release，不提供版本或渠道选择；
@@ -13,7 +15,7 @@
 ### Added
 
 - macOS 14+（Apple Silicon / Intel）安装器适配，与 Linux 共用客户端和版本；
-  保留摘要校验、旧环境及 workspace，自更新沿用相同安装入口。macOS 原生验收待完成。
+  保留摘要校验、旧环境及 workspace，自更新沿用相同安装入口。原生验收范围见 0.3.0 发布记录。
 - Linux 与两种 macOS 架构的持续验证配置，覆盖源码测试、固定工件安装和本机用户主路径。
 
 ## 0.2.0 - 2026-11-16
