@@ -52,6 +52,11 @@ fe-cli --no-update-check
 候选安装仍须来自核对过的提交和摘要，不覆盖或重命名旧正式发布。
 在 macOS 正式版本可用前，不对候选运行 `--update`：更新服务发现的正式版可能仍只有 Linux 安装器。
 
+本次实现检查点为 `9c3c029`，本机已构建试用包 `dist/fe-cli-macos-preview-9c3c029.tar.gz`。
+将该包复制到 Mac 并解压后，进入 `macos-preview-20261117` 目录即可使用以上附件安装命令。
+这份包仍使用开发元数据 `0.2.0`，属于未发布候选；Linux 实际安装检查已通过，Mac 实机待验收。
+归档不包含 Python 或依赖 wheel；安装仍需访问 PyPI，并在缺少 uv/Python 时访问其下载源。
+
 安装器使用系统 `sh`、`curl`、`shasum -a 256`、`sw_vers` 和 BSD 文件命令，无需 GNU coreutils、
 Homebrew 或管理员权限；缺少 uv 时自动获取固定版本，Python 及依赖由 uv 准备，只安装 wheel。
 Apple Silicon 应从原生 arm64 终端运行；Rosetta x86_64 会按 Intel 进程架构安装，本轮不承诺跨架构迁移。

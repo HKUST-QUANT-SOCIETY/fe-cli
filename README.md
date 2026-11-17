@@ -16,7 +16,8 @@
 ## 近期迭代
 
 - 2026-11-17：新增 macOS 14+（Apple Silicon / Intel）的安装适配及两架构持续验证配置，
-  与 Linux 共用代码和版本；尚未发布或完成 Mac 原生验收。见[安装手册](docs/installation.md#macos-preview)
+  与 Linux 共用代码和版本；固定提交试用包已通过 Linux 安装和重复安装检查，Mac 原生验收及发布待完成。
+  见[安装手册](docs/installation.md#macos-preview)
   与[开发记录](docs/development.md#macos-adaptation)。
 
 - 2026-11-16：服务器更新统一为“本机修改 → 远端发布 → 服务器拉取指定发布版本”，禁止现场改源码；Core 本次升级为 0.5.2，CLI 独立编号。见[共享发布规范](docs/shared_release_workflow.md#发布前置条件)。

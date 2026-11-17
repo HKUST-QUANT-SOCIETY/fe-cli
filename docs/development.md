@@ -20,9 +20,17 @@ GitHub 工作流面向 Linux 及两架构 Mac，在固定提交构建完整附�
 正常本机执行环境补跑 execution 起的相关文件 458 passed / 5 skipped，history 另有 21 passed。
 已离线构建通用 wheel，在源码目录外独立 Python 3.12 环境完成 version/help/init、因子保存、
 日期范围、只准备请求及重复初始化保留文件检查。Ruff、shell/工作流内嵌代码语法和文档链接检查通过。
+实现检查点为 `9c3c0295d3807fc0ff9a4de6ca73842a8b894cc3`，已从此固定提交离线构建完整候选附件，
+位于本机忽略目录 `dist/macos-preview-20261117/`；清单 SHA256 为
+`705cca535e8c6d4954154384d5f1df0ee7a3576dc34586dcb457b64ec49b0ef9`。
+所有附件摘要核对通过；实际安装器在 Linux 临时独立环境完成锁定依赖安装与入口切换，
+并直接执行工作流中的源码外检查代码，version/help/init/factor/prepare、请求包仅含 request.json、
+重复安装复用环境且保留 workspace 均通过。可转移试用包为本机
+`dist/fe-cli-macos-preview-9c3c029.tar.gz`（内含候选附件与 SHA256SUMS）。
+候选沿用开发元数据 0.2.0，仅用于本地试用，不是重发正式 0.2.0；远端工件未变。
 配置尚未在 GitHub 执行，不宣称 Mac 已验收。
 原生 Mac 安装/升级与界面、APFS 同步、SSH/真实任务仍需分别验证，详见[试用与验收边界](installation.md#macos-preview)。
-对应实现由本节所在检查点提交记录；发布时另行确定版本并登记固定源码身份与工件摘要。
+本文档验收补记作为后续独立检查点提交；发布时另行确定版本并登记固定源码身份与工件摘要。
 
 ## 服务器安装必须取自远端发布（2026-11-16）
 
