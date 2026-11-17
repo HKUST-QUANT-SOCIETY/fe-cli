@@ -15,6 +15,10 @@
 
 ## 近期迭代
 
+- 2026-11-17：新增 macOS 14+（Apple Silicon / Intel）的安装适配及两架构持续验证配置，
+  与 Linux 共用代码和版本；尚未发布或完成 Mac 原生验收。见[安装手册](docs/installation.md#macos-preview)
+  与[开发记录](docs/development.md#macos-adaptation)。
+
 - 2026-11-16：服务器更新统一为“本机修改 → 远端发布 → 服务器拉取指定发布版本”，禁止现场改源码；Core 本次升级为 0.5.2，CLI 独立编号。见[共享发布规范](docs/shared_release_workflow.md#发布前置条件)。
 
 - 2026-11-16：发布 `0.2.0`：裸字段公式原样提交，授权检查改用 `/status`，首次 `/init` 自动配置
@@ -38,6 +42,9 @@
 curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/download/v0.2.0/install.sh?download=1' | sh && export PATH="$HOME/.local/bin:$PATH"
 fe-cli
 ```
+
+以上 `0.2.0` 正式安装器仍只支持 Linux。当前开发版已增加 macOS 14+ 的 Apple Silicon / Intel
+适配，尚未正式发布或完成原生验收；Mac 本地试用方式见[安装手册](docs/installation.md#macos-preview)。
 
 输入 `/` 打开菜单，使用上下键选择、Tab 补全、Enter 执行。
 选中命令后，输入框内以灰字显示参数用法，例如 `/factor [list | new | show ID | edit ID | delete ID | use ID]`。

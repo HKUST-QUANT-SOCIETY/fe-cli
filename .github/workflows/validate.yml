@@ -1,0 +1,132 @@
+name: Validate Linux and macOS
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: ${{ matrix.os }} / Python 3.12
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Native macOS 15 on both architectures; macOS 14 remains unverified.
+        include:
+          - os: ubuntu-24.04
+            architecture: x86_64
+          - os: macos-15-intel
+            architecture: x86_64
+          - os: macos-15
+            architecture: arm64
+    env:
+      FE_CLI_NO_UPDATE_CHECK: "1"
+      PYTHONNOUSERSITE: "1"
+      FE_CLI_RELEASE_DIR: ${{ runner.temp }}/fe-release
+      FE_CLI_INSTALL_ROOT: ${{ runner.temp }}/fe installation
+      FE_CLI_BIN_DIR: ${{ runner.temp }}/fe commands
+      FE_EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv and select Python
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.11.28"
+          python-version: "3.12"
+          require-checksums: true
+          enable-cache: false
+      - name: Install locked source dependencies
+        run: uv sync --locked
+      - name: Check source style
+        run: uv run --locked ruff check .
+      - name: Run tests
+        run: uv run --locked pytest -q
+      - name: Build fixed-commit installation assets
+        env:
+          FE_BUILD_REPOSITORY: ${{ github.repository }}
+        run: |
+          uv run --locked python scripts/build_cli_release.py \
+            --ref HEAD --repository "$FE_BUILD_REPOSITORY" \
+            --output "$RUNNER_TEMP/fe-release"
+      - name: Install wheel through the release installer
+        run: sh "$FE_CLI_RELEASE_DIR/install.sh"
+      - name: Check installed local user paths outside source
+        run: |
+          cd "$RUNNER_TEMP"
+          # Use the installed environment's Python, never the editable source environment.
+          installed_python="$(dirname "$(readlink "$FE_CLI_BIN_DIR/fe-cli")")/python"
+          "$installed_python" - <<'PY'
+          import importlib.metadata
+          import json
+          import os
+          import platform
+          import subprocess
+          import sys
+          import tarfile
+          from pathlib import Path
+
+          import fe_cli
+
+          source = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          assert not Path(fe_cli.__file__).resolve().is_relative_to(source)
+          assert not Path.cwd().resolve().is_relative_to(source)
+          assert platform.machine() == os.environ["FE_EXPECTED_ARCHITECTURE"]
+          assets = Path(os.environ["FE_CLI_RELEASE_DIR"])
+          manifest = json.loads((assets / "release.json").read_text())
+          version = importlib.metadata.version("fe-cli")
+          assert version == manifest["version"] == fe_cli.__version__
+          root = Path(os.environ["RUNNER_TEMP"]) / "fe user paths with spaces"
+          root.mkdir()
+          workspace = root / "research workspace"
+          launcher = Path(os.environ["FE_CLI_BIN_DIR"]) / "fe-cli"
+          environment = os.environ | {"PYTHONPATH": "", "XDG_CONFIG_HOME": str(root / "config")}
+          common = ["--no-update-check", "--workspace", str(workspace)]
+
+          def invoke(*arguments, command=launcher):
+              result = subprocess.run(
+                  [str(command), *common, *arguments], cwd=root, env=environment,
+                  capture_output=True, text=True, timeout=30,
+              )
+              assert result.returncode == 0, (arguments, result.stdout, result.stderr)
+              return result.stdout
+
+          assert invoke("--version").strip() == f"fe-cli {version}"
+          alias = Path(sys.executable).parent / "fe"
+          assert invoke("--version", command=alias).strip() == f"fe {version}"
+          assert "prepare" in invoke("--help")
+          initialized = json.loads(invoke("init"))
+          assert Path(initialized["workspace"]) == workspace
+          expression = 'ts_mean(col("ret"), 20)'
+          invoke("factor", "add", "ci_local", "--expression", expression)
+          assert json.loads(invoke("factor", "show", "ci_local"))["factor"]["expression"] == expression
+          prepared = json.loads(invoke("prepare", "ci_local", "--start", "2026-10-01",
+                                       "--end", "2026-10-30"))["run"]
+          assert prepared["status"] == "PREPARED" and prepared["job_id"] is None
+          with tarfile.open(prepared["bundle_path"]) as archive:
+              assert archive.getnames() == ["request.json"]
+          retained = {path: path.read_bytes() for path in workspace.rglob("*") if path.is_file()}
+          invoke("init")
+          assert all(path.read_bytes() == content for path, content in retained.items())
+          # A repeated real installer invocation must reuse the environment and preserve data.
+          original_target = launcher.resolve()
+          marker = original_target.parent.parent / "ci-retained-file"
+          marker.write_text("retain existing environment\n")
+          subprocess.run(["sh", str(assets / "install.sh")], cwd=root, check=True, timeout=300)
+          assert launcher.resolve() == original_target
+          assert original_target.parent == Path(sys.executable).parent
+          assert marker.read_text() == "retain existing environment\n"
+          assert all(path.read_bytes() == content for path, content in retained.items())
+          assert json.loads(invoke("factor", "show", "ci_local"))["factor"]["expression"] == expression
+          print(f"Installed fe-cli {version}: local paths and repeated installation passed")
+          PY

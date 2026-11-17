@@ -28,15 +28,31 @@ main() {
         [ "$version" = "$FE_CLI_EXPECTED_VERSION" ] || fail \
             'Release version differs from the requested update; installation was not started.'
     fi
-    [ "$(uname -s)" = Linux ] || fail 'This installer supports Linux only.'
-    [ "$(uname -m)" = x86_64 ] || fail 'This release supports x86_64 only.'
-    libc=$(getconf GNU_LIBC_VERSION 2>/dev/null) || fail 'glibc >= 2.28 is required.'
-    libc=${libc#glibc }
-    major=${libc%%.*}
-    minor=${libc#*.}
-    [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 28 ]; } ||
-        fail 'glibc >= 2.28 is required.'
-    for tool in curl sha256sum mktemp readlink; do
+    platform=$(uname -s)
+    architecture=$(uname -m)
+    case "$platform" in
+        Linux)
+            [ "$architecture" = x86_64 ] || fail 'Linux releases support x86_64 only.'
+            libc=$(getconf GNU_LIBC_VERSION 2>/dev/null) || fail 'glibc >= 2.28 is required.'
+            libc=${libc#glibc }
+            major=${libc%%.*}
+            minor=${libc#*.}
+            [ "$major" -gt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -ge 28 ]; } ||
+                fail 'glibc >= 2.28 is required.'
+            hash_tool=sha256sum
+            ;;
+        Darwin)
+            case "$architecture" in x86_64|arm64) ;; *) fail 'macOS requires x86_64 or arm64.' ;; esac
+            command -v sw_vers >/dev/null 2>&1 || fail 'sw_vers is required on macOS.'
+            macos=$(sw_vers -productVersion) || fail 'Could not determine the macOS version.'
+            major=${macos%%.*}
+            case "$major" in ''|*[!0-9]*) fail 'Invalid macOS version.' ;; esac
+            [ "$major" -ge 14 ] || fail 'macOS >= 14 is required.'
+            hash_tool=shasum
+            ;;
+        *) fail 'This installer supports Linux and macOS only.' ;;
+    esac
+    for tool in curl "$hash_tool" mktemp readlink; do
         command -v "$tool" >/dev/null 2>&1 || fail "Required command is missing: $tool"
     done
     umask 077
@@ -90,7 +106,11 @@ main() {
         fi
     }
     verify() {
-        actual=$(sha256sum "$work/$1")
+        if [ "$platform" = Darwin ]; then
+            actual=$(shasum -a 256 "$work/$1")
+        else
+            actual=$(sha256sum "$work/$1")
+        fi
         actual=${actual%% *}
         [ "$actual" = "$2" ] || fail "SHA256 mismatch: $1"
     }
@@ -115,7 +135,7 @@ main() {
             curl --fail --show-error --silent --location --proto '=https' \
                 --proto-redir '=https' --connect-timeout 15 --max-time 300 \
                 https://astral.sh/uv/0.11.28/install.sh --output "$work/uv-install.sh"
-            UV_UNMANAGED_INSTALL="$work/uv" sh "$work/uv-install.sh"
+            UV_UNMANAGED_INSTALL="$work/uv" UV_NO_MODIFY_PATH=1 sh "$work/uv-install.sh"
             uv_bin="$work/uv/uv"
         fi
         # Create at the final path: virtual environments cannot be safely relocated.
@@ -134,7 +154,12 @@ main() {
     check_target
     link="$bin_dir/.fe-cli-link-$$"
     ln -s "$environment/bin/fe-cli" "$link"
-    mv -Tf "$link" "$target"
+    if [ "$platform" = Darwin ]; then
+        # BSD mv -h replaces a destination symlink instead of following it into a directory.
+        mv -fh "$link" "$target"
+    else
+        mv -Tf "$link" "$target"
+    fi
     link=''
     printf 'Installed %s\nStart with: fe-cli\n' "$actual_version"
     case ":$PATH:" in

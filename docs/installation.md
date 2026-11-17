@@ -1,4 +1,4 @@
-# Linux 安装与 CLI 发布
+# CLI 安装与发布
 
 ## 当前状态
 
@@ -17,6 +17,52 @@ Core、服务器和数据接入不随客户端安装或升级，真实运行须�
 - 需要访问 GitHub、Astral/Python 下载源及 PyPI；首版不是离线包。
   依赖按 `uv.lock` 导出并校验 SHA256，只使用 wheel，不在用户机器编译 PyArrow。
 - Python 包元数据允许 Python >=3.12；安装器的验证范围限定为上述 Python 3.12 平台。
+
+<a id="macos-preview"></a>
+
+## macOS 开发版（未发布）
+
+当前源码已适配 macOS 14+，包括 Apple Silicon（arm64）及 Intel（x86_64），使用 Python 3.12。
+仍与 Linux 共享同一个客户端版本、通用 wheel、依赖锁及 `install.sh`，不维护独立 Mac 分支。
+正式 `0.2.0` 附件仍是原 Linux 工件，不含此适配；不要在 Mac 上运行上方历史 curl 命令。
+本轮仅在 Linux 完成兼容分支模拟与回归；两架构的 macOS 原生安装、界面和真实 SSH 链路待验收。
+
+已配置 GitHub 持续验证，在 Linux 及 macOS 的两种 CPU 架构运行测试，并构建固定提交工件、
+从源码目录外安装和检查本机主路径；配置本身不代表工作流已经执行成功。
+
+需要立即在 Mac 试用时，先在已有 uv 的 Mac 上取得含本适配的源码检查点，再运行：
+
+```bash
+uv sync --locked --python 3.12
+uv run fe-cli --version
+uv run fe-cli --no-update-check
+```
+
+这是开发版源码试用，会在该 checkout 建立项目环境，不要求安装 Core。
+源码安装继续通过源码和 uv 更新，不能使用官方安装器专属的 `--update`。
+由维护者提供固定检查点构建的完整候选附件后，也可在附件目录内试装：
+
+```bash
+shasum -a 256 -c SHA256SUMS
+FE_CLI_RELEASE_DIR="$PWD" sh ./install.sh
+export PATH="$HOME/.local/bin:$PATH"
+fe-cli --no-update-check
+```
+
+候选安装仍须来自核对过的提交和摘要，不覆盖或重命名旧正式发布。
+在 macOS 正式版本可用前，不对候选运行 `--update`：更新服务发现的正式版可能仍只有 Linux 安装器。
+
+安装器使用系统 `sh`、`curl`、`shasum -a 256`、`sw_vers` 和 BSD 文件命令，无需 GNU coreutils、
+Homebrew 或管理员权限；缺少 uv 时自动获取固定版本，Python 及依赖由 uv 准备，只安装 wheel。
+Apple Silicon 应从原生 arm64 终端运行；Rosetta x86_64 会按 Intel 进程架构安装，本轮不承诺跨架构迁移。
+默认命令仍为 `~/.local/bin/fe-cli`，环境仍在 `${XDG_DATA_HOME:-~/.local/share}/fe-cli/versions/`；
+配置、缓存及 `~/fe-workspace` 沿用既有位置，不迁移到 `~/Library`。
+macOS 默认 zsh 可将 `export PATH="$HOME/.local/bin:$PATH"` 加入 `~/.zshrc`，安装器不修改启动文件。
+
+SSH 默认使用本机 `ssh`，账号、密钥及 known_hosts 按该 OpenSSH 的配置管理，不复制私钥。
+界面建议至少 80×24；复制仍取决于终端是否支持并允许 OSC 52，未验证的终端可使用其自身选择复制。
+Mac 原生验收应覆盖首次/重复安装、升级与回退、带空格路径、因子 CSV 并发写入、结果交付，
+以及界面的 Enter/Ctrl+J、鼠标、中文和剪贴板行为；真实 SSH/任务另需有权限的用户显式验证。
 
 ## 安装和启动
 
@@ -127,6 +173,8 @@ uv run scripts/build_cli_release.py --ref HEAD \
 构建器用 Git archive 隔离未提交、忽略和本机文件；执行 uv build 和锁定依赖导出，
 生成 wheel、sdist、requirements.txt、release.json、install.sh、SHA256SUMS。
 清单记录版本、源提交、下载仓库、依赖及工件摘要、平台和协议；已有输出目录拒绝覆盖。
+`compatibility.installer` 保留原 Linux 字段以兼容既有读取；新增 `installer_targets` 列举 Linux
+及两个 macOS 目标，Mac 的 `pending_native_validation` 明确表示尚未完成原生验收。
 构建不创建标签、不上传、不修改仓库可见性。只安装候选 wheel 并验证用户主路径，
 通过后推广相同摘要的工件，不在推广时重建。
 

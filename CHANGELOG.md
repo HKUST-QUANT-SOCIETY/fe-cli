@@ -5,6 +5,12 @@
 
 ## Unreleased
 
+### Added
+
+- macOS 14+（Apple Silicon / Intel）安装器适配，与 Linux 共用客户端和版本；
+  保留摘要校验、旧环境及 workspace，自更新沿用相同安装入口。macOS 原生验收待完成。
+- Linux 与两种 macOS 架构的持续验证配置，覆盖源码测试、固定工件安装和本机用户主路径。
+
 ## 0.2.0 - 2026-11-16
 
 ### Maintenance

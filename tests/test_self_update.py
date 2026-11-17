@@ -17,6 +17,8 @@ RELEASE = ReleaseInfo("0.1.1", hashlib.sha256(PAYLOAD).hexdigest())
 
 @pytest.fixture
 def owned(tmp_path, monkeypatch):
+    # Match the installer's canonical paths (macOS may expose /var via a symlink).
+    tmp_path = tmp_path.resolve()
     root = tmp_path / "install root with spaces"
     manifest = json.dumps({
         "product": "fe-cli", "schema": "fe-cli-install-release-v1", "version": "0.1.0",

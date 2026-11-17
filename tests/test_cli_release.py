@@ -86,6 +86,17 @@ def test_release_uses_fixed_archive_and_complete_asset_hashes(repository, fake_u
     ).stdout.decode().strip()
     assert manifest["core"]["installed_by_cli"] is False
     assert manifest["core"]["compatibility_status"] == "unverified"
+    compatibility = manifest["compatibility"]
+    assert compatibility["installer"] == {
+        "os": "Linux", "architecture": "x86_64", "glibc": ">=2.28", "python": "3.12",
+    }
+    assert compatibility["installer_targets"] == [
+        compatibility["installer"],
+        {"os": "macOS", "minimum_version": "14", "architecture": "arm64", "python": "3.12",
+         "validation_status": "pending_native_validation"},
+        {"os": "macOS", "minimum_version": "14", "architecture": "x86_64", "python": "3.12",
+         "validation_status": "pending_native_validation"},
+    ]
     assert "install.sh" not in manifest["artifacts"]
     assert "release.json" not in manifest["artifacts"]
     assert len(manifest["artifacts"]) == 3

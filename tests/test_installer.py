@@ -4,6 +4,7 @@ import hashlib
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -36,25 +37,62 @@ def executable(path, content):
 
 
 class Installer:
-    def __init__(self, base):
-        self.base = base
-        self.home = base / "home with spaces"
-        self.tools = base / "tools"
+    def __init__(self, base, platform=None):
+        # macOS temporary directories may be reached through the /var symlink.
+        self.base = base.resolve()
+        self.home = self.base / "home with spaces"
+        self.tools = self.base / "tools"
+        self.platform = platform
         self.home.mkdir()
         self.tools.mkdir()
         # A closed PATH ensures neither a host uv nor a network client is used.
-        for name in (
-            "uname", "getconf", "sha256sum", "mktemp", "readlink", "mkdir",
-            "rmdir", "cp", "rm", "cat", "ln", "mv", "sh", "chmod",
-        ):
+        native_tools = [
+            "mktemp", "readlink", "mkdir", "rmdir", "cp", "rm", "cat", "ln", "sh", "chmod",
+        ]
+        if platform is None:
+            native_tools += ["uname", "mv"]
+            native_tools += ["sw_vers", "shasum"] if sys.platform == "darwin" else [
+                "getconf", "sha256sum",
+            ]
+        for name in native_tools:
             found = shutil.which(name)
             assert found, f"Installer test requires {name}"
             (self.tools / name).symlink_to(found)
+        if platform is not None:
+            architecture = platform.removeprefix("Darwin-")
+            executable(self.tools / "uname", f"""#!/bin/sh
+case "$1" in
+    -s) printf '%s\\n' Darwin ;;
+    -m) printf '%s\\n' "${{FE_TEST_ARCH:-{architecture}}}" ;;
+    *) exit 91 ;;
+esac
+""")
+            executable(self.tools / "sw_vers", """#!/bin/sh
+[ "$#" -eq 1 ] && [ "$1" = -productVersion ] || exit 92
+printf '%s\\n' "${FE_TEST_MACOS-14.0}"
+""")
+            # These stand-ins deliberately reject GNU-only flags and use no host hash tools.
+            executable(self.tools / "shasum", f"#!{sys.executable}\n" + """
+import hashlib
+import pathlib
+import sys
+if len(sys.argv) != 4 or sys.argv[1:3] != ['-a', '256']:
+    sys.exit(93)
+print(hashlib.sha256(pathlib.Path(sys.argv[3]).read_bytes()).hexdigest(), sys.argv[3])
+""")
+            executable(self.tools / "mv", f"#!{sys.executable}\n" + """
+import os
+import sys
+if len(sys.argv) != 4 or sys.argv[1] != '-fh':
+    sys.exit(94)
+# Model BSD -h: replace the symlink itself, including one pointing at a directory.
+os.replace(sys.argv[2], sys.argv[3])
+""")
         executable(self.tools / "uv", FAKE_UV)
         executable(self.tools / "curl", "#!/bin/sh\necho 'Network disabled in test' >&2\nexit 99\n")
         self.root = self.home / "data with spaces" / "fe-cli"
         self.bin = self.home / ".local" / "bin"
-        self.log = base / "uv.log"
+        self.log = self.base / "uv.log"
         self.env = {
             "HOME": str(self.home),
             "PATH": str(self.tools),
@@ -112,9 +150,11 @@ class Installer:
         assert not list(self.bin.glob(".fe-cli-link-*"))
 
 
-@pytest.fixture
-def installer(tmp_path):
-    return Installer(tmp_path)
+@pytest.fixture(
+    params=[None, "Darwin-x86_64", "Darwin-arm64"], ids=["native", "mac-intel", "mac-arm"],
+)
+def installer(tmp_path, request):
+    return Installer(tmp_path, request.param)
 
 
 @pytest.mark.parametrize("asset", ["wheel", "requirements.txt", "release.json"])
@@ -279,6 +319,13 @@ def test_upgrade_keeps_old_environment_and_failed_upgrade_keeps_active_command(i
         assert (old_environment / path).read_bytes() == content
     installer.assert_no_temporary_files()
 
+    rollback = installer.run(first_script)
+    assert rollback.returncode == 0, rollback.stderr
+    assert installer.target.resolve() == old_environment / "bin" / "fe-cli"
+    assert new_environment.is_dir()
+    assert failed_environment.is_dir()
+    installer.assert_no_temporary_files()
+
 
 def test_missing_uv_bootstraps_locally_without_editing_shell_profiles(installer):
     script, environment = installer.release()
@@ -288,6 +335,7 @@ def test_missing_uv_bootstraps_locally_without_editing_shell_profiles(installer)
     bootstrap = installer.base / "uv-bootstrap.sh"
     executable(bootstrap, """#!/bin/sh
 set -eu
+[ "$UV_NO_MODIFY_PATH" = 1 ]
 printf '%s\\n' "$UV_UNMANAGED_INSTALL" > "$FE_TEST_BOOTSTRAP_LOG"
 mkdir -p "$UV_UNMANAGED_INSTALL"
 cp "$FE_TEST_UV_PAYLOAD" "$UV_UNMANAGED_INSTALL/uv"
@@ -325,4 +373,47 @@ cp "$FE_TEST_BOOTSTRAP" "$output"
     assert len(curl_log.read_text().splitlines()) == 1
     for path in profiles:
         assert path.read_bytes() == b"existing profile\n"
+    installer.assert_no_temporary_files()
+
+
+@pytest.mark.parametrize("macos", ["13.6.9", "12.7", "invalid", ""])
+def test_macos_version_rejected_before_creating_paths(installer, macos):
+    if installer.platform is None:
+        pytest.skip("Requires the closed macOS platform stand-ins")
+    script, environment = installer.release()
+
+    result = installer.run(script, FE_TEST_MACOS=macos)
+
+    assert result.returncode != 0
+    assert "macOS" in result.stderr
+    assert not installer.root.exists()
+    assert not installer.bin.exists()
+    assert not environment.exists()
+    assert not installer.log.exists()
+
+
+def test_macos_unsupported_architecture_is_rejected(installer):
+    if installer.platform is None:
+        pytest.skip("Requires the closed macOS platform stand-ins")
+    script, _ = installer.release()
+
+    result = installer.run(script, FE_TEST_ARCH="i386")
+
+    assert result.returncode != 0
+    assert "x86_64 or arm64" in result.stderr
+    assert not installer.root.exists()
+
+
+def test_owned_looking_directory_symlink_is_replaced_without_following_it(installer):
+    script, environment = installer.release()
+    directory = installer.root / "versions" / "previous" / "bin" / "fe-cli"
+    directory.mkdir(parents=True)
+    installer.bin.mkdir(parents=True)
+    installer.target.symlink_to(directory, target_is_directory=True)
+
+    result = installer.run(script)
+
+    assert result.returncode == 0, result.stderr
+    assert installer.target.resolve() == environment / "bin" / "fe-cli"
+    assert list(directory.iterdir()) == []
     installer.assert_no_temporary_files()

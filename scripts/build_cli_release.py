@@ -111,6 +111,14 @@ def build_release(
             "compatibility": {
                 "installer": {"os": "Linux", "architecture": "x86_64", "glibc": ">=2.28",
                               "python": "3.12"},
+                "installer_targets": [
+                    {"os": "Linux", "architecture": "x86_64", "glibc": ">=2.28",
+                     "python": "3.12"},
+                    {"os": "macOS", "minimum_version": "14", "architecture": "arm64",
+                     "python": "3.12", "validation_status": "pending_native_validation"},
+                    {"os": "macOS", "minimum_version": "14", "architecture": "x86_64",
+                     "python": "3.12", "validation_status": "pending_native_validation"},
+                ],
                 "package": {"python": ">=3.12"},
             },
             "protocols": {"request_result": "fe-cli-result-v1",

@@ -6,6 +6,9 @@
 日常变更先登记根 `CHANGELOG.md` 的 Unreleased，检查点提交与正式发布分开。
 
 - 使用 `uv sync --locked`、`uv run fe`；Python >=3.12，客户端依赖保持轻量。
+- Linux 与 macOS 共用客户端源码、版本和安装模板；当前正式安装范围及 macOS 开发版边界见
+  [安装手册](installation.md#macos-preview)。平台分支集中在安装器，不依赖 GNU 工具在 Mac 上存在；
+  保留文件锁、目录同步与结果校验保障。macOS 两架构须由原生验证，Linux 模拟不能替代。
 - 当前支持本地模拟、用户显式选择的在线查询与单因子真实运行；默认仍为模拟模式。
 - 普通查询只允许 `cluster-envs`、`cluster-status`、`cluster-history`；单次运行通过独立的
   `cluster-submit` 和 `cluster-results` 传输入口。禁止隐式连接和任意远程命令。
