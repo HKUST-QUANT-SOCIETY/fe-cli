@@ -2,10 +2,10 @@
 
 ## 当前状态
 
-最新正式版本为 `0.2.0`，`fe` 兼容入口保留：
-[GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.2.0)。
-固定提交、工件摘要、安装验收和推广范围见[发布记录](releases/0.2.0.md)，
-历史版本见 [0.1.1 记录](releases/0.1.1.md)、[0.1.0 记录](releases/0.1.0.md)。
+最新正式版本为 `0.3.0`，Linux 与 macOS 共用版本，`fe` 兼容入口保留：
+[GitHub Release](https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/tag/v0.3.0)。
+固定提交、工件摘要、原生验收和发布范围见[发布记录](releases/0.3.0.md)，
+历史版本见 [0.2.0 记录](releases/0.2.0.md)、[0.1.1 记录](releases/0.1.1.md)、[0.1.0 记录](releases/0.1.0.md)。
 Core、服务器和数据接入不随客户端安装或升级，真实运行须另行配置和验收。
 
 <a id="release-policy"></a>
@@ -24,52 +24,28 @@ CLI 暂不区分发布渠道，仅维护最新正式版；不建立旧版本维�
 
 ## 支持范围
 
-- 首版安装器支持 Linux / WSL、x86_64、glibc >= 2.28；不支持 Alpine/musl、ARM、macOS 或 Windows 原生。
+- Linux / WSL 支持 x86_64、glibc >=2.28；macOS 支持 14+、Apple Silicon arm64 或 Intel x86_64。
+  不支持 Alpine/musl、Linux ARM 或 Windows 原生。macOS 原生 CI 已覆盖 15 两架构，最低 14 尚未实机验证。
 - 安装器用 uv 建立 Python 3.12 独立环境；已有 uv 可复用，否则从 Astral 的固定版本安装器临时获取。
   Python 缺失时由 uv 下载。不要求系统 Python，不执行 sudo，不修改系统包。
-- 需要 `sh`、`curl`、`sha256sum` 和常见 GNU/Linux 文件命令，终端界面建议至少 80×24。
-- 需要访问 GitHub、Astral/Python 下载源及 PyPI；首版不是离线包。
+- Linux 需要 `sh`、`curl`、`sha256sum` 及常见 GNU/Linux 命令；macOS 使用系统 `shasum`、`sw_vers`
+  及 BSD 文件命令，不要求 GNU coreutils。终端界面建议至少 80×24。
+- 需要访问 GitHub、Astral/Python 下载源及 PyPI；不是离线包。
   依赖按 `uv.lock` 导出并校验 SHA256，只使用 wheel，不在用户机器编译 PyArrow。
 - Python 包元数据允许 Python >=3.12；安装器的验证范围限定为上述 Python 3.12 平台。
 
 <a id="macos-preview"></a>
 
-## macOS 开发版（未发布）
+## macOS 安装与原生验收
 
-当前源码已适配 macOS 14+，包括 Apple Silicon（arm64）及 Intel（x86_64），使用 Python 3.12。
-仍与 Linux 共享同一个客户端版本、通用 wheel、依赖锁及 `install.sh`，不维护独立 Mac 分支。
-目前 latest 对应的正式 `0.2.0` 附件仍是原 Linux 工件，不含此适配；Mac 须等待适配版本正式发布。
-本轮仅在 Linux 完成兼容分支模拟与回归；两架构的 macOS 原生安装、界面和真实 SSH 链路待验收。
+从正式 `0.3.0` 起，macOS 与 Linux 共享同一个客户端版本、通用 wheel、依赖锁及 `install.sh`。
+直接使用下方最新版 curl 命令，不需克隆源码或选择平台版本；也可通过 `fe-cli --update` 更新官方安装器管理的安装。
+历史 `0.2.0` 正式附件只支持 Linux；此前带 0.2.0 开发元数据的本地 Mac 试用包不属于正式发布。
+这类试用安装可重新执行最新版 curl 命令迁移，保留既有环境和 workspace。
 
-已配置 GitHub 持续验证，在 Linux 及 macOS 的两种 CPU 架构运行测试，并构建固定提交工件、
-从源码目录外安装和检查本机主路径；配置本身不代表工作流已经执行成功。
-
-需要立即在 Mac 试用时，先在已有 uv 的 Mac 上取得含本适配的源码检查点，再运行：
-
-```bash
-uv sync --locked --python 3.12
-uv run fe-cli --version
-uv run fe-cli --no-update-check
-```
-
-这是开发版源码试用，会在该 checkout 建立项目环境，不要求安装 Core。
-源码安装继续通过源码和 uv 更新，不能使用官方安装器专属的 `--update`。
-由维护者提供固定检查点构建的完整候选附件后，也可在附件目录内试装：
-
-```bash
-shasum -a 256 -c SHA256SUMS
-FE_CLI_RELEASE_DIR="$PWD" sh ./install.sh
-export PATH="$HOME/.local/bin:$PATH"
-fe-cli --no-update-check
-```
-
-候选安装仍须来自核对过的提交和摘要，不覆盖或重命名旧正式发布。
-在 macOS 正式版本可用前，不对候选运行 `--update`：更新服务发现的正式版可能仍只有 Linux 安装器。
-
-本次实现检查点为 `9c3c029`，本机已构建试用包 `dist/fe-cli-macos-preview-9c3c029.tar.gz`。
-将该包复制到 Mac 并解压后，进入 `macos-preview-20261117` 目录即可使用以上附件安装命令。
-这份包仍使用开发元数据 `0.2.0`，属于未发布候选；Linux 实际安装检查已通过，Mac 实机待验收。
-归档不包含 Python 或依赖 wheel；安装仍需访问 PyPI，并在缺少 uv/Python 时访问其下载源。
+原生 CI 已在 macOS 15 的 arm64 / x86_64 上完成全量测试、同一组正式工件安装、
+源码目录外主路径和重复安装的数据保留检查，详见[0.3.0 记录](releases/0.3.0.md)。
+安装包不包含 Python 或依赖 wheel；仍需网络获取缺失依赖。
 
 安装器使用系统 `sh`、`curl`、`shasum -a 256`、`sw_vers` 和 BSD 文件命令，无需 GNU coreutils、
 Homebrew 或管理员权限；缺少 uv 时自动获取固定版本，Python 及依赖由 uv 准备，只安装 wheel。
@@ -80,12 +56,12 @@ macOS 默认 zsh 可将 `export PATH="$HOME/.local/bin:$PATH"` 加入 `~/.zshrc`
 
 SSH 默认使用本机 `ssh`，账号、密钥及 known_hosts 按该 OpenSSH 的配置管理，不复制私钥。
 界面建议至少 80×24；复制仍取决于终端是否支持并允许 OSC 52，未验证的终端可使用其自身选择复制。
-Mac 原生验收应覆盖首次/重复安装、升级与回退、带空格路径、因子 CSV 并发写入、结果交付，
-以及界面的 Enter/Ctrl+J、鼠标、中文和剪贴板行为；真实 SSH/任务另需有权限的用户显式验证。
+最低 macOS 14、自动下载 uv 的 Mac 首装、真实终端的按键/鼠标/中文/剪贴板和真实 SSH/任务
+尚未独立验收；CI 的虚拟终端测试不能代替这些范围。Core 与节点兼容声明不随客户端发布扩大。
 
 ## 安装和启动
 
-免登录安装最新正式版并启动（本次核对为 `0.2.0`）：
+免登录安装最新正式版并启动（本次核对为 `0.3.0`）：
 
 ```bash
 curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/latest/download/install.sh' | sh && export PATH="$HOME/.local/bin:$PATH"
@@ -93,9 +69,10 @@ fe-cli
 ```
 
 执行上面命令会下载并运行安装脚本；也可以先下载审阅，再执行。
-本次下载到的 `0.2.0` 脚本 SHA256：`433c02cf7772ee5223f28f9602242c2438510e7a986031e6d9d1f896b4fbb9b1`。
+本次下载到的 `0.3.0` 脚本 SHA256：`9acd1b14ed912568eb5063896b2ba6da4541590a3229668116bbf5b723623b94`。
 该摘要仅对应这一固定工件，后续最新版本的摘要以对应发布记录为准。
 维护者也可下载最新 Release 全部附件，从核对摘要后的本地目录验收安装：
+以下校验命令用于 Linux；macOS 将首行替换为 `shasum -a 256 -c SHA256SUMS`。
 
 ```bash
 sha256sum -c SHA256SUMS
@@ -114,10 +91,10 @@ fe-cli
 shell 配置后，新终端即可直接执行 `fe-cli`；当前 shell 的 PATH 需要显式 export。
 可通过绝对路径 `FE_CLI_BIN_DIR` 和 `FE_CLI_INSTALL_ROOT` 自定义安装位置。
 
-维护者不使用安装器验收工件时，也可用项目 uv 工具流程安装已校验的 wheel（以下以 `0.2.0` 为例）：
+维护者不使用安装器验收工件时，也可用项目 uv 工具流程安装已校验的 wheel（以下以 `0.3.0` 为例）：
 
 ```bash
-uv tool install --python 3.12 --constraints requirements.txt ./fe_cli-0.2.0-py3-none-any.whl
+uv tool install --python 3.12 --constraints requirements.txt ./fe_cli-0.3.0-py3-none-any.whl
 fe-cli --version
 fe-cli
 ```

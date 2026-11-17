@@ -3,7 +3,7 @@
 - [工程与本地交付规则](engineering.md)：项目边界、验证和检查点提交要求。
 - [Core/CLI 共享维护工作流](shared_release_workflow.md)：独立版本线、兼容性、迭代、发布、安装与升级规范。
 - [产品变更日志](../CHANGELOG.md)：Unreleased 和今后正式发布的重要变化。
-- [安装与发布](installation.md)：最新版 curl 安装、维护范围、macOS 开发验收及历史工件说明。
+- [安装与发布](installation.md)：Linux/macOS 最新版 curl 安装、维护范围、原生验收及历史工件说明。
 - [0.3.0 发布记录](releases/0.3.0.md)：Linux/macOS 共用工件、原生验证与最新安装入口。
 - [0.1.0 发布记录](releases/0.1.0.md)：源提交、摘要、验收和推广状态。
 - [0.1.1 发布记录](releases/0.1.1.md)：更新提示、自更新、旧版迁移及正式发布身份。

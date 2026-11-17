@@ -8,23 +8,18 @@
 支持本地模拟、通过 SSH 认证的 QCL 查询和调用既有服务器入口执行单因子任务。默认启动模拟模式；显式使用
 `--online run`，或在在线终端的运行编辑区按 Enter 确认，才提交真实任务。
 `results` / `collect` 下载并校验结果后写入本机；在线取消与服务器环境安装不支持。
-当前正式版本为 `0.2.0`；下述初始化、裸字段和 `/status` 新行为需要升级到此版本。
+当前正式版本为 `0.3.0`，新增 macOS 安装支持；初始化、裸字段和 `/status` 行为从 `0.2.0` 起提供。
 自动选择当前 FE 的模式要求服务器提供配套启动入口；Core 的发布与服务器升级由维护者独立完成。
 默认任务请求为 `quant-a / 6 CPU / 18G`，可通过 `/node` 和 `/resources` 选择；
 模拟报告的 `PASS` 只表示演示流程完成。
 
 ## 近期迭代
 
-- 2026-11-17：准备发布 `0.3.0`，统一 Linux 与 macOS 安装入口；正式发布前由两种 Mac 架构
-  安装同一组固定工件验收。发布状态和边界见[0.3.0 记录](docs/releases/0.3.0.md)。
+- 2026-11-17：发布 `0.3.0`，统一 Linux 与 macOS 安装入口；Linux 及 macOS 15 的 Intel、Apple Silicon
+  均通过同一组工件的原生测试、安装与重复安装验收。见[0.3.0 发布记录](docs/releases/0.3.0.md)。
 
 - 2026-11-17：CLI 统一从固定 curl 入口安装最新正式版，暂不区分发布渠道；仅维护最新版，
   历史 Release 保留供下载和追溯。见[安装与维护范围](docs/installation.md#release-policy)。
-
-- 2026-11-17：新增 macOS 14+（Apple Silicon / Intel）的安装适配及两架构持续验证配置，
-  与 Linux 共用代码和版本；固定提交试用包已通过 Linux 安装和重复安装检查，Mac 原生验收及发布待完成。
-  见[安装手册](docs/installation.md#macos-preview)
-  与[开发记录](docs/development.md#macos-adaptation)。
 
 - 2026-11-16：服务器更新统一为“本机修改 → 远端发布 → 服务器拉取指定发布版本”，禁止现场改源码；Core 本次升级为 0.5.2，CLI 独立编号。见[共享发布规范](docs/shared_release_workflow.md#发布前置条件)。
 
@@ -42,7 +37,8 @@
 
 ## 启动
 
-支持 Linux / WSL x86_64、glibc >=2.28。安装器自动准备 uv、Python 3.12 和依赖，
+支持 Linux / WSL x86_64、glibc >=2.28，以及 macOS 14+ 的 Apple Silicon / Intel。
+安装器自动准备 uv、Python 3.12 和依赖，
 不需要 sudo 或克隆源码：
 
 ```bash
@@ -50,8 +46,8 @@ curl -fsSL 'https://github.com/HKUST-QUANT-SOCIETY/fe-cli/releases/latest/downlo
 fe-cli
 ```
 
-目前最新正式安装器（`0.2.0`）仍只支持 Linux。当前开发版已增加 macOS 14+ 的 Apple Silicon / Intel
-适配，尚未正式发布或完成原生验收；Mac 本地试用方式见[安装手册](docs/installation.md#macos-preview)。
+macOS 原生验收覆盖 macOS 15 两种架构；最低 macOS 14、真实终端交互和 SSH 另列验收边界，
+见[安装手册](docs/installation.md#macos-preview)。
 
 输入 `/` 打开菜单，使用上下键选择、Tab 补全、Enter 执行。
 选中命令后，输入框内以灰字显示参数用法，例如 `/factor [list | new | show ID | edit ID | delete ID | use ID]`。
